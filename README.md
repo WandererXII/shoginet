@@ -1,4 +1,4 @@
-# Shoginet - Distributed Network for lishogi.org
+# Shoginet - Distributed Network for [lishogi.org](lishogi.org)
 
 Based on [fairyfishnet](https://github.com/gbtami/fairyfishnet).
 
@@ -16,8 +16,10 @@ isready
 ```
 after readyOk appears run:
 `bench`
+If the engine didn't crash, it means it should work.
 
-If you have YaneuraOu ready and python3 installed just run `python3 ./shoginet.py`, it will ask you about working directory, name of the engine and similar, leaving everything default should be fine. Currently no need key is required. If you want to go over this setup step again, just delete `fishnet.ini`
+If you have YaneuraOu ready and python3 installed just run `python3 ./shoginet.py`, it will ask you about what working directory you want to use, path to the engine and similar things, leaving everything default should be fine. Currently no key is required.
+If you want to go over this setup step again, just delete fishnet.ini.
 
 #### Windows
 
