@@ -435,8 +435,8 @@ def fixColor(fen):
 		return " ".join(splitted)
 
 def fixPosition(position):
-    return position.replace("U", "+L").replace("M", "+N").replace("A", "+S").replace("D", "+R").replace("H", "+B").replace("T", "+P")
-
+    position = position.replace("U", "+L").replace("M", "+N").replace("A", "+S").replace("D", "+R").replace("H", "+B").replace("T", "+P").replace("u", "+l").replace("m", "+n").replace("a", "+s").replace("d", "+r").replace("h", "+b").replace("t", "+p")
+    return fixPocket(position)
 
 # lishogi uses chess coordinates internally, so we change coords into usi format for the engine
 def ucitousi(moves, string = False):
@@ -445,6 +445,25 @@ def ucitousi(moves, string = False):
 	if string:
 		return moves.translate(transtable)
 	return [m.translate(transtable) for m in moves]
+
+def fixPocket(sfen):
+    splitted = sfen.split(' ')
+    if(len(splitted) > 2 and splitted[2] != '-'):
+        # rook, bishop, gold, silver, knight, lance, pawn
+        pieceOrder = "RBGSNLPrbgsnlp"
+        pocket = ""
+        for i in "RBGSNLPrbgsnlp":
+            c = splitted[2].count(i)
+            if c == 0:
+                pass
+            elif c == 1:
+                pocket += i
+            else:
+                pocket += str(c) + i
+                
+        splitted[2] = pocket
+    return ' '.join(splitted)
+
 
 # lishogi used to send pgn role symbol instead of +
 def fixpromotion(moves, string = False):
@@ -810,7 +829,6 @@ class Worker(threading.Thread):
 
     def work(self):
         result = self.make_request()
-
         if self.job and self.job["work"]["type"] == "analysis":
             result = self.analysis(self.job)
             return "analysis" + "/" + self.job["work"]["id"], result
@@ -839,8 +857,7 @@ class Worker(threading.Thread):
         lvl = job["work"]["level"]
         moves = job["moves"].split(" ")
         moves = ucitousi(fixpromotion(moves))
-        position = fixPosition(job["position"])
-        position = fixColor(position)
+        position = fixColor(fixPosition(job["position"]))
 
         logging.debug("Playing %s with lvl %d",
                       self.job_name(job), lvl)
@@ -874,8 +891,7 @@ class Worker(threading.Thread):
         moves = job["moves"].split(" ")
         moves = ucitousi(fixpromotion(moves))
 
-        position = fixPosition(job["position"])
-        position = fixColor(position)
+        position = fixColor(fixPosition(job["position"]))
 
         result = self.make_request()
         result["analysis"] = [None for _ in range(len(moves) + 1)]
@@ -1258,7 +1274,7 @@ def configure(args):
     print("You can build custom YaneuraOu yourself and provide", file=out)
     print("the path or automatically download a precompiled binary.", file=out)
     print(file=out)
-    stockfish_command = config_input("Path or command (will download by default): ",
+    stockfish_command = config_input("Path or command (default is YaneuraOu-by-gcc): ",
                                      lambda v: validate_stockfish_command(v, conf),
                                      out)
     if not stockfish_command:
@@ -1909,7 +1925,7 @@ def main(argv):
     g = parser.add_argument_group("advanced")
     g.add_argument("--endpoint", help="lishogi https endpoint (default: %s)" % DEFAULT_ENDPOINT)
     g.add_argument("--engine-dir", help="engine working directory")
-    g.add_argument("--stockfish-command", help="stockfish command (default: download precompiled Stockfish)")
+    g.add_argument("--stockfish-command", help="stockfish command (default: YaneuraOu-by-gcc)")
     g.add_argument("--threads-per-process", "--threads", type=int, dest="threads", help="hint for the number of threads to use per engine process (default: %d)" % DEFAULT_THREADS)
     g.add_argument("--fixed-backoff", action="store_true", default=None, help="fixed backoff (only recommended for move servers)")
     g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
