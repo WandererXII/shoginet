@@ -460,7 +460,7 @@ def fixPocket(sfen):
                 pocket += i
             else:
                 pocket += str(c) + i
-                
+
         splitted[2] = pocket
     return ' '.join(splitted)
 
@@ -477,7 +477,7 @@ def fixpromotion(moves, string = False):
 		if len(m) == 5:
 			newmoves.append(m[:4] + '+')
 		else: newmoves.append(m)
-	return newmoves 
+	return newmoves
 
 
 def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
@@ -1015,7 +1015,7 @@ def stockfish_filename():
     if os.name == "nt":
         return "YaneuraOu-%s%s.exe" % (machine, suffix)
     elif os.name == "os2" or sys.platform == "darwin":
-        return "YaneuraOu-osx-%s" % machine
+        return "YaneuraOu-by-gcc"
     elif os.name == "posix":
         return "YaneuraOu-by-gcc"
 
