@@ -14,7 +14,7 @@ fi
 echo "- Determining CPU architecture..."
 
 ARCH=SSE42
-COMP=clang
+COMP=clang++
 
 case "$(uname -s)" in
   Darwin)
