@@ -122,6 +122,7 @@ CHECK_PYPI_CHANCE = 0.01
 LVL_SKILL = [-4, 0, 3, 6, 10, 14, 16, 18, 20]
 LVL_MOVETIMES = [50, 50, 100, 150, 200, 300, 400, 500, 1000]
 LVL_DEPTHS = [1, 1, 1, 2, 3, 5, 8, 13, 22]
+LVL_NODES = [1, 10, 100, 300, 600, 1250, 2500, 5000, 0]
 
 
 def intro():
@@ -871,12 +872,12 @@ class Worker(threading.Thread):
         start = time.time()
         part = go(self.stockfish, position, moves,
                   movetime=movetime, clock=job["work"].get("clock"),
-                  depth=LVL_DEPTHS[lvl])
+                  depth=LVL_DEPTHS[lvl], nodes=LVL_NODES[lvl])
         end = time.time()
 
-        logging.log(PROGRESS, "Played move in %s with lvl %d: %0.3fs elapsed, depth %d",
+        logging.log(PROGRESS, "Played move in %s with lvl %d: %0.3fs elapsed, depth %d, nodes %d",
                     self.job_name(job),
-                    lvl, end - start, part.get("depth", 0))
+                    lvl, end - start, part.get("depth", 0), part.get("nodes", 0))
 
         self.nodes += part.get("nodes", 0)
         self.positions += 1
