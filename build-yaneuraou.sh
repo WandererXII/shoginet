@@ -14,16 +14,27 @@ fi
 echo "- Determining CPU architecture..."
 
 ARCH=SSE42
+COMP=clang++
 
-if [ -f /proc/cpuinfo ]; then
-    if grep "^flags" /proc/cpuinfo | grep -q avx2 ; then
-        ARCH=AVX2
+case "$(uname -s)" in
+  Darwin)
+    if sysctl -a | grep machdep.cpu.leaf7_features | grep -q AVX2 ; then
+      ARCH=AVX2
+      COMP=g++
     fi
-fi
+    ;;
+  Linux)
+    if [ -f /proc/cpuinfo ]; then
+      if grep "^flags" /proc/cpuinfo | grep -q avx2 ; then
+        ARCH=AVX2
+      fi
+    fi
+    ;;
+esac
 
 echo "- Building YANEURAOU $ARCH ... (patience advised)"
 
-make TARGET_CPU=$ARCH YANEURAOU_EDITION=YANEURAOU_ENGINE_NNUE > /dev/null
+make TARGET_CPU=$ARCH YANEURAOU_EDITION=YANEURAOU_ENGINE_NNUE COMPILER=$COMP > /dev/null
 
 cd ../..
 mv ./YaneuraOu/source/YaneuraOu-by-gcc .
