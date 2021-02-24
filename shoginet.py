@@ -922,7 +922,7 @@ class Worker(threading.Thread):
             logging.log(PROGRESS, "Analysing: %s", self.job_name(job, ply))
 
             part = go(self.stockfish, position, moves[0:ply],
-                      nodes=nodes, movetime=4000)
+                      nodes=nodes, movetime=8000)
 
             if "mate" not in part["score"] and "time" in part and part["time"] < 100:
                 logging.warning("Very low time reported: %d ms.", part["time"])
