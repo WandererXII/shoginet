@@ -520,7 +520,7 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
             bestmove = arg.split()[0]
             if bestmove and bestmove != "(none)":
                 info["bestmove"] = ucitousi(bestmove, True)
-            if info["pv"]:
+            if "pv" in info:
                 info["pv"] = " ".join(ucitousi(info["pv"].split(" ")))
             return info
 
