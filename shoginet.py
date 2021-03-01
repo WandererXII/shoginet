@@ -108,8 +108,8 @@ __license__ = "GPLv3+"
 
 DEFAULT_ENDPOINT = "https://lishogi.org/fishnet/"
 YANEURAOU_RELEASES = "https://api.github.com/repos/yaneurao/YaneuraOu/releases/latest"
-DEFAULT_THREADS = 3
-HASH_MIN = 32
+DEFAULT_THREADS = 2
+HASH_MIN = 64
 HASH_DEFAULT = 256
 HASH_MAX = 512
 MAX_BACKOFF = 30.0
