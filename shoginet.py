@@ -100,7 +100,7 @@ except NameError:
     DEAD_ENGINE_ERRORS = (EOFError, IOError)
 
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"
 
 __author__ = "Wanderer"
 __email__ = "contact@lishogi.org"
@@ -425,20 +425,6 @@ def setoption(p, name, value):
 
     send(p, "setoption name %s value %s" % (name, value))
 
-def fixColor(fen):
-	splitted = fen.split(' ')
-	if len(splitted) > 1:
-		color = splitted[1]
-		if color == "b":
-			splitted[1] = "w"
-		else:
-			splitted[1] = "b"
-		return " ".join(splitted)
-
-def fixPosition(position):
-    position = position.replace("U", "+L").replace("M", "+N").replace("A", "+S").replace("D", "+R").replace("H", "+B").replace("T", "+P").replace("u", "+l").replace("m", "+n").replace("a", "+s").replace("d", "+r").replace("h", "+b").replace("t", "+p")
-    return fixPocket(position)
-
 # lishogi uses chess coordinates internally, so we change coords into usi format for the engine
 def ucitousi(moves, string = False):
 	transtable = {97: 57, 98: 56, 99: 55, 100: 54, 101: 53, 102: 52, 103: 51, 104: 50, 105: 49 }
@@ -446,24 +432,6 @@ def ucitousi(moves, string = False):
 	if string:
 		return moves.translate(transtable)
 	return [m.translate(transtable) for m in moves]
-
-def fixPocket(sfen):
-    splitted = sfen.split(' ')
-    if(len(splitted) > 2 and splitted[2] != '-'):
-        # rook, bishop, gold, silver, knight, lance, pawn
-        pieceOrder = "RBGSNLPrbgsnlp"
-        pocket = ""
-        for i in "RBGSNLPrbgsnlp":
-            c = splitted[2].count(i)
-            if c == 0:
-                pass
-            elif c == 1:
-                pocket += i
-            else:
-                pocket += str(c) + i
-
-        splitted[2] = pocket
-    return ' '.join(splitted)
 
 
 # lishogi used to send pgn role symbol instead of +
@@ -497,9 +465,9 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
         builder.append(str(nodes))
     if clock is not None:
         builder.append("btime")
-        builder.append(str(clock["wtime"] * 10))
-        builder.append("wtime")
         builder.append(str(clock["btime"] * 10))
+        builder.append("wtime")
+        builder.append(str(clock["wtime"] * 10))
         builder.append("byoyomi")
         builder.append(str(clock["byo"] * 1000))
         if(clock["inc"] > 0):
@@ -860,7 +828,6 @@ class Worker(threading.Thread):
         lvl = job["work"]["level"]
         moves = job["moves"].split(" ")
         moves = ucitousi(fixpromotion(moves))
-        position = fixColor(fixPosition(job["position"]))
 
         logging.debug("Playing %s with lvl %d",
                       self.job_name(job), lvl)
@@ -872,7 +839,7 @@ class Worker(threading.Thread):
         movetime = int(round(LVL_MOVETIMES[lvl] / (self.threads * 0.9 ** (self.threads - 1))))
 
         start = time.time()
-        part = go(self.stockfish, position, moves,
+        part = go(self.stockfish, job["position"], moves,
                   movetime=movetime, clock=job["work"].get("clock"),
                   depth=LVL_DEPTHS[lvl], nodes=LVL_NODES[lvl])
         end = time.time()
@@ -893,8 +860,6 @@ class Worker(threading.Thread):
     def analysis(self, job):
         moves = job["moves"].split(" ")
         moves = ucitousi(fixpromotion(moves))
-
-        position = fixColor(fixPosition(job["position"]))
 
         result = self.make_request()
         result["analysis"] = [None for _ in range(len(moves) + 1)]
@@ -921,7 +886,7 @@ class Worker(threading.Thread):
 
             logging.log(PROGRESS, "Analysing: %s", self.job_name(job, ply))
 
-            part = go(self.stockfish, position, moves[0:ply],
+            part = go(self.stockfish, job["position"], moves[0:ply],
                       nodes=nodes, movetime=8000)
 
             if "mate" not in part["score"] and "time" in part and part["time"] < 100:
