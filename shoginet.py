@@ -771,7 +771,7 @@ class Worker(threading.Thread):
         self.stockfish_info["options"] = {}
         self.stockfish_info["options"]["Threads"] = str(self.threads)
         self.stockfish_info["options"]["USI_Hash"] = str(self.memory)
-        self.stockfish_info["options"]["EnteringKingRule"] = "TryRule"
+        self.stockfish_info["options"]["EnteringKingRule"] = "CSARule27"
         self.stockfish_info["options"]["BookFile"] = "no_book"
         self.stockfish_info["options"]["ConsiderationMode"] = "true"
         self.stockfish_info["options"]["OutputFailLHPV"] = "true"
