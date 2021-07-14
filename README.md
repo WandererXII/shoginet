@@ -19,11 +19,26 @@ after readyOk appears run:
 If the engine didn't crash, it probably works.
 
 If you have YaneuraOu ready and python3 installed just run `python3 ./shoginet.py`, it will ask you about what working directory you want to use, path to the engine and similar things, leaving everything default should be fine. Currently no key is required.
-If you want to go over this setup step again, just delete fishnet.ini.
+If you want to go over this setup step again, just delete the `fishnet.ini`.
 
 #### Windows
 
-Windows is not supported right now. Although almost everything should be fine. You will obviously have to compile YaneuraOu for windows and provide the correct path, when shoginet.py asks you the first time.
+Shoginet should works on windows the same way it does on linux, though you require make a few small changes.
+
+Firstly, you need to get YaneuraOu v6.0.0 with NNUE for windows, which you will find in [YaneuraOu's releases](https://github.com/yaneurao/YaneuraOu/releases). To test that engine works on you machine just run the engine `./YaneuraOu-*` (The name of the engine you downloaded). 
+```
+usi
+isready
+```
+after `readyOk` appears run: 
+```
+bench
+```
+If the engine didn't crash, it probably works. Make sure to add the windows version of YaneuraOu that you have downloaded in the shoginet directory.
+
+If you have YaneuraOu ready and python3 installed just run `python3 ./shoginet.py`, it will ask you about what working directory you want to use, path to the engine and similar things, leaving everything default should be fine, just provide the proper path the YaneuraOu engine that you have downloaded. Currently no key is required.
+
+If you want to go over this setup step again, just delete the `fishnet.ini` file.
 
 ## How it works
 
