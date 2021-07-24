@@ -25,6 +25,26 @@ If you want to go over this setup step again, just delete fishnet.ini.
 
 Windows is not supported right now. Although almost everything should be fine. You will obviously have to compile YaneuraOu for windows and provide the correct path, when shoginet.py asks you the first time.
 
+#### Docker
+
+If you have a Docker engine installed, installation via Docker is the easiest
+and most reliable way to run Shoginet. You can simply do:
+
+```bash
+docker build -t shoginet:latest .
+```
+
+And once that completes, run it with:
+
+```bash
+docker run -it shoginet:latest
+```
+
+(If you already have a `fishnet.ini` file prepared, you can bindmount that file
+in to `/shoginet/fishnet.ini`. Otherwise, you'll be prompted for configuration 
+values.)
+
+
 ## How it works
 
 Every once in a while shoginet running on your computer asks lishogi.org for some work. If someone requested analysis of their game on lishogi.org, you may receive this work. The work is a simple json containing mainly the initial position and sequence of moves. You then run engine analysis on these data and send the results back to lishogi.org.
