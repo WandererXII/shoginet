@@ -1,4 +1,4 @@
-# Shoginet - Distributed Network for [lishogi.org](lishogi.org)
+# Shoginet - Distributed Network for [lishogi.org](https://lishogi.org/)
 
 Based on [fairyfishnet](https://github.com/gbtami/fairyfishnet).
 
@@ -27,4 +27,4 @@ Windows is not supported right now. Although almost everything should be fine. Y
 
 ## How it works
 
-Every once in a while shoginet running on your computer asks lishogi.org for some work. If someone requested analysis of their game on lishogi.org, you may receive this work. The work is a simple json containing mainly the initial position and sequence of moves. You then run engine analysis on these data and send the results back to lishogi.org.
+Every once in a while shoginet running on your computer asks [lishogi.org](https://lishogi.org/) for some work. If someone requested analysis of their game on [lishogi.org](https://lishogi.org/), you may receive this work. The work is a simple json containing mainly the initial position and sequence of moves. You then run engine analysis on these data and send the results back to [lishogi.org](https://lishogi.org/).
