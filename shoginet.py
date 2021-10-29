@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-"""Distributed YaneuraOu analysis for lishogi"""
+"""Distributed Fairy-Stockfish analysis for lishogi"""
 
 from __future__ import print_function
 from __future__ import division
@@ -87,11 +87,6 @@ try:
 except NameError:
     pass
 
-except ImportError:
-    print("No pyffish module installed!", file=sys.stderr)
-    sf_ok = False
-    raise
-
 try:
     # Python 3
     DEAD_ENGINE_ERRORS = (EOFError, IOError, BrokenPipeError)
@@ -107,7 +102,7 @@ __email__ = "contact@lishogi.org"
 __license__ = "GPLv3+"
 
 DEFAULT_ENDPOINT = "https://lishogi.org/fishnet/"
-YANEURAOU_RELEASES = "https://api.github.com/repos/yaneurao/YaneuraOu/releases/latest"
+STOCKFISH_RELEASES = "https://api.github.com/repos/ianfab/Fairy-Stockfish/releases/latest"
 DEFAULT_THREADS = 2
 HASH_MIN = 64
 HASH_DEFAULT = 256
@@ -122,7 +117,6 @@ CHECK_PYPI_CHANCE = 0.01
 LVL_SKILL = [-4, 0, 3, 6, 10, 14, 16, 18, 20]
 LVL_MOVETIMES = [50, 50, 100, 150, 200, 300, 400, 500, 1000]
 LVL_DEPTHS = [1, 1, 1, 2, 3, 5, 8, 13, 22]
-LVL_NODES = [1, 10, 0, 0, 0, 0, 0, 0, 0]
 
 
 def intro():
@@ -136,7 +130,7 @@ def intro():
 .        `\_   ===    \.  |     \__ \ | | | (_) | (_| | || |\  |  __/ |_
 .        / /\_   \ /      |     |___/_| |_|\___/ \__, |_||_| \_|\___|\__| %s
 .        |/   \_  \|      /                      |___/
-.               \________/      Distributed YaneuraOu analysis for lishogi
+.               \________/      Distributed Fairy-Stockfish analysis for lishogi
 """.lstrip() % __version__
 
 
@@ -385,17 +379,24 @@ def usi(p):
     send(p, "usi")
 
     engine_info = {}
+    variants = set()
 
     while True:
         command, arg = recv_usi(p)
 
         if command == "usiok":
-            return engine_info
+            return engine_info, variants
         elif command == "id":
             name_and_value = arg.split(None, 1)
             if len(name_and_value) == 2:
                 engine_info[name_and_value[0]] = name_and_value[1]
         elif command == "option":
+            if arg.startswith("name USI_Variant type combo default shogi"):
+                for variant in arg.split(" ")[6:]:
+                    if variant != "var":
+                        variants.add(variant)
+        elif command == "Fairy-Stockfish" and " by " in arg:
+            # Ignore identification line
             pass
         else:
             logging.warning("Unexpected engine response to usi: %s %s", command, arg)
@@ -407,8 +408,6 @@ def isready(p):
         command, arg = recv_usi(p)
         if command == "readyok":
             break
-        elif command == "info" and arg.startswith("string Error! "):
-            logging.warning("Unexpected engine response to isready: %s %s", command, arg)
         elif command == "info" and arg.startswith("string "):
             pass
         else:
@@ -449,7 +448,7 @@ def fixpromotion(moves, string = False):
 	return newmoves
 
 
-def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
+def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None, variant=None):
     send(p, "position sfen %s moves %s" % (position, " ".join(moves)))
 
     builder = []
@@ -552,6 +551,17 @@ def go(p, position, moves, movetime=None, clock=None, depth=None, nodes=None):
             logging.warning("Unexpected engine response to go: %s %s", command, arg)
 
 
+def set_variant_options(p, variant):
+    variant = variant.lower()
+
+    setoption(p, "Protocol", "usi")
+
+    if variant in ["standard", "from position"]:
+        setoption(p, "USI_Variant", "shogi")
+    else:
+        setoption(p, "USI_Variant", variant)
+
+
 class ProgressReporter(threading.Thread):
     def __init__(self, queue_size, conf):
         super(ProgressReporter, self).__init__()
@@ -631,7 +641,7 @@ class Worker(threading.Thread):
     def stop(self):
         with self.status_lock:
             self.alive = False
-            self.kill_engine()
+            self.kill_stockfish()
             self.sleep.set()
 
     def stop_soon(self):
@@ -658,7 +668,7 @@ class Worker(threading.Thread):
     def run_inner(self):
         try:
             # Check if the engine is still alive and start, if necessary
-            self.start_engine()
+            self.start_stockfish()
 
             # Do the next work unit
             path, request = self.work()
@@ -673,7 +683,7 @@ class Worker(threading.Thread):
 
             if alive:
                 self.sleep.wait(t)
-                self.kill_engine()
+                self.kill_stockfish()
 
             return
 
@@ -742,7 +752,7 @@ class Worker(threading.Thread):
 
         self.job = None
 
-    def kill_engine(self):
+    def kill_stockfish(self):
         with self.stockfish_lock:
             if self.stockfish:
                 try:
@@ -751,7 +761,7 @@ class Worker(threading.Thread):
                     logging.exception("Failed to kill engine process.")
                 self.stockfish = None
 
-    def start_engine(self):
+    def start_stockfish(self):
         with self.stockfish_lock:
             # Check if already running.
             if self.stockfish and self.stockfish.poll() is None:
@@ -761,25 +771,20 @@ class Worker(threading.Thread):
             self.stockfish = open_process(get_stockfish_command(self.conf, False),
                                           get_engine_dir(self.conf))
 
-        self.stockfish_info = usi(self.stockfish)
+        self.stockfish_info, _ = usi(self.stockfish)
         self.stockfish_info.pop("author", None)
         logging.info("Started %s, threads: %s (%d), pid: %d",
-                     self.stockfish_info.get("name", "YaneuraOu <?>"),
+                     self.stockfish_info.get("name", "Stockfish <?>"),
                      "+" * self.threads, self.threads, self.stockfish.pid)
 
         # Prepare USI options
         self.stockfish_info["options"] = {}
         self.stockfish_info["options"]["Threads"] = str(self.threads)
         self.stockfish_info["options"]["USI_Hash"] = str(self.memory)
-        self.stockfish_info["options"]["EnteringKingRule"] = "CSARule27"
-        self.stockfish_info["options"]["BookFile"] = "no_book"
-        self.stockfish_info["options"]["ConsiderationMode"] = "true"
-        self.stockfish_info["options"]["OutputFailLHPV"] = "true"
-        #self.stockfish_info["options"]["analysis contempt"] = "Off"
 
         # Custom options
-        if self.conf.has_section("YaneuraOu"):
-            for name, value in self.conf.items("YaneuraOu"):
+        if self.conf.has_section("Stockfish"):
+            for name, value in self.conf.items("Stockfish"):
                 self.stockfish_info["options"][name] = value
 
         # Set USI options
@@ -800,6 +805,7 @@ class Worker(threading.Thread):
 
     def work(self):
         result = self.make_request()
+
         if self.job and self.job["work"]["type"] == "analysis":
             result = self.analysis(self.job)
             return "analysis" + "/" + self.job["work"]["id"], result
@@ -826,13 +832,16 @@ class Worker(threading.Thread):
 
     def bestmove(self, job):
         lvl = job["work"]["level"]
+        variant = job.get("variant", "standard")
         moves = job["moves"].split(" ")
         moves = ucitousi(fixpromotion(moves))
 
-        logging.debug("Playing %s with lvl %d",
-                      self.job_name(job), lvl)
+        logging.debug("Playing %s (%s) with lvl %d",
+                      self.job_name(job), variant, lvl)
 
-        setoption(self.stockfish, "SkillLevel", LVL_SKILL[lvl])
+        set_variant_options(self.stockfish, variant)
+        setoption(self.stockfish, "Skill_Level", LVL_SKILL[lvl])
+        setoption(self.stockfish, "USI_AnalyseMode", False)
         send(self.stockfish, "usinewgame")
         isready(self.stockfish)
 
@@ -841,12 +850,12 @@ class Worker(threading.Thread):
         start = time.time()
         part = go(self.stockfish, job["position"], moves,
                   movetime=movetime, clock=job["work"].get("clock"),
-                  depth=LVL_DEPTHS[lvl], nodes=LVL_NODES[lvl])
+                  depth=LVL_DEPTHS[lvl], variant=variant)
         end = time.time()
 
-        logging.log(PROGRESS, "Played move in %s with lvl %d: %0.3fs elapsed, depth %d, nodes %d",
-                    self.job_name(job),
-                    lvl, end - start, part.get("depth", 0), part.get("nodes", 0))
+        logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed, depth %d",
+                    self.job_name(job), variant,
+                    lvl, end - start, part.get("depth", 0))
 
         self.nodes += part.get("nodes", 0)
         self.positions += 1
@@ -858,6 +867,7 @@ class Worker(threading.Thread):
         return result
 
     def analysis(self, job):
+        variant = job.get("variant", "standard")
         moves = job["moves"].split(" ")
         moves = ucitousi(fixpromotion(moves))
 
@@ -865,7 +875,9 @@ class Worker(threading.Thread):
         result["analysis"] = [None for _ in range(len(moves) + 1)]
         start = last_progress_report = time.time()
 
-        setoption(self.stockfish, "SkillLevel", 20)
+        set_variant_options(self.stockfish, variant)
+        setoption(self.stockfish, "Skill_Level", 20)
+        setoption(self.stockfish, "USI_AnalyseMode", True)
         send(self.stockfish, "usinewgame")
         isready(self.stockfish)
 
@@ -884,10 +896,10 @@ class Worker(threading.Thread):
                     self.progress_reporter.send(job, result)
                 last_progress_report = time.time()
 
-            logging.log(PROGRESS, "Analysing: %s", self.job_name(job, ply))
+            logging.log(PROGRESS, "Analysing %s: %s", variant, self.job_name(job, ply))
 
             part = go(self.stockfish, job["position"], moves[0:ply],
-                      nodes=nodes, movetime=8000)
+                      nodes=nodes, movetime=8000, variant=variant)
 
             if "mate" not in part["score"] and "time" in part and part["time"] < 100:
                 logging.warning("Very low time reported: %d ms.", part["time"])
@@ -981,11 +993,11 @@ def stockfish_filename():
         suffix = ""
 
     if os.name == "nt":
-        return "YaneuraOu-%s%s.exe" % (machine, suffix)
+        return "fairy-stockfish-largeboards-%s%s.exe" % (machine, suffix)
     elif os.name == "os2" or sys.platform == "darwin":
-        return "YaneuraOu-by-gcc"
+        return "fairy-stockfish-largeboards"
     elif os.name == "posix":
-        return "YaneuraOu-by-gcc"
+        return "fairy-stockfish-largeboards"
 
 
 def download_github_release(conf, release_page, filename):
@@ -1012,7 +1024,7 @@ def download_github_release(conf, release_page, filename):
         logging.info("Local %s is newer than release", filename)
         return filename
     elif response.status_code != 200:
-        raise ConfigError("Failed to look up latest YaneuraOu release (status %d)" % (response.status_code, ))
+        raise ConfigError("Failed to look up latest Stockfish release (status %d)" % (response.status_code, ))
 
     release = response.json()
 
@@ -1023,7 +1035,7 @@ def download_github_release(conf, release_page, filename):
             logging.info("Found %s" % asset["browser_download_url"])
             break
     else:
-        return "YaneuraOu-by-gcc"
+        return "fairy-stockfish-largeboards"
 
     # Download
     logging.info("Downloading %s ...", filename)
@@ -1038,12 +1050,15 @@ def download_github_release(conf, release_page, filename):
 
             if sys.stderr.isatty():
                 sys.stderr.write("\rDownloading %s: %d/%d (%d%%)" % (
-                                    filename, progress, size,
-                                    progress * 100 / size))
+                    filename, progress, size,
+                    progress * 100 / size))
                 sys.stderr.flush()
     if sys.stderr.isatty():
         sys.stderr.write("\n")
         sys.stderr.flush()
+
+    if filename.endswith(".nnue"):
+        return filename
 
     # Make executable
     logging.info("chmod +x %s", filename)
@@ -1053,7 +1068,7 @@ def download_github_release(conf, release_page, filename):
 
 
 def update_stockfish(conf, filename):
-    return download_github_release(conf, YANEURAOU_RELEASES, filename)
+    return download_github_release(conf, STOCKFISH_RELEASES, filename)
 
 
 def is_user_site_package():
@@ -1160,7 +1175,7 @@ def load_conf(args):
     if hasattr(args, "engine_dir") and args.engine_dir is not None:
         conf.set("Fishnet", "EngineDir", args.engine_dir)
     if hasattr(args, "stockfish_command") and args.stockfish_command is not None:
-        conf.set("Fishnet", "YaneraOuCommand", args.stockfish_command)
+        conf.set("Fishnet", "StockfishCommand", args.stockfish_command)
     if hasattr(args, "key") and args.key is not None:
         conf.set("Fishnet", "Key", args.key)
     if hasattr(args, "cores") and args.cores is not None:
@@ -1174,7 +1189,7 @@ def load_conf(args):
     if hasattr(args, "fixed_backoff") and args.fixed_backoff is not None:
         conf.set("Fishnet", "FixedBackoff", str(args.fixed_backoff))
     for option_name, option_value in args.setoption:
-        conf.set("YaneuraOu", option_name.lower(), option_value)
+        conf.set("Stockfish", option_name.lower(), option_value)
 
     logging.getLogger().addFilter(CensorLogFilter(conf_get(conf, "Key")))
 
@@ -1216,7 +1231,7 @@ def configure(args):
 
     conf = configparser.ConfigParser()
     conf.add_section("Fishnet")
-    conf.add_section("YaneuraOu")
+    conf.add_section("Stockfish")
 
     # Ensure the config file is going to be writable
     config_file = os.path.abspath(args.conf or DEFAULT_CONFIG)
@@ -1236,13 +1251,14 @@ def configure(args):
 
     # Stockfish command
     print(file=out)
-    print("YaneuraOu is licensed under the GNU General Public License v3.", file=out)
-    print("You can find the source at: https://github.com/yaneuraou/YaneuraOu", file=out)
+    print("Shoginet uses Fairy-Stockfish largeboards with variant support.", file=out)
+    print("Fairy-Stockfish is licensed under the GNU General Public License v3.", file=out)
+    print("You can find the source at: https://github.com/ianfab/Fairy-Stockfish", file=out)
     print(file=out)
-    print("You can build custom YaneuraOu yourself and provide", file=out)
+    print("You can build Fairy-Stockfish yourself and provide", file=out)
     print("the path or automatically download a precompiled binary.", file=out)
     print(file=out)
-    stockfish_command = config_input("Path or command (default is YaneuraOu-by-gcc): ",
+    stockfish_command = config_input("Path or command (default is fairy-stockfish-largeboards): ",
                                      lambda v: validate_stockfish_command(v, conf),
                                      out)
     if not stockfish_command:
@@ -1313,9 +1329,17 @@ def validate_stockfish_command(stockfish_command, conf):
 
     # Ensure the required options are supported
     process = open_process(stockfish_command, engine_dir)
-    usi(process) # todo some checks
+    _, variants = usi(process)
 
     kill_process(process)
+
+    logging.debug("Supported variants: %s", ", ".join(variants))
+
+    required_variants = set(["shogi", "minishogi"])
+    missing_variants = required_variants.difference(variants)
+    if missing_variants:
+        raise ConfigError("Ensure you are using Fairy-Stockfish. "
+                          "Unsupported variants: %s" % ", ".join(missing_variants))
 
     return stockfish_command
 
@@ -1504,7 +1528,7 @@ def cmd_run(args):
     stockfish_command = validate_stockfish_command(conf_get(conf, "StockfishCommand"), conf)
     if not stockfish_command:
         print()
-        print("### Updating YaneuraOu ...")
+        print("### Updating Stockfish ...")
         print()
         stockfish_command = get_stockfish_command(conf)
 
@@ -1550,7 +1574,7 @@ def cmd_run(args):
         buckets[i % instances] += 1
 
     progress_reporter = ProgressReporter(len(buckets) + 4, conf)
-    progress_reporter.setDaemon(True)
+    progress_reporter.daemon = True
     progress_reporter.start()
 
     workers = [Worker(conf, bucket, memory // instances, progress_reporter) for bucket in buckets]
@@ -1558,7 +1582,7 @@ def cmd_run(args):
     # Start all threads
     for i, worker in enumerate(workers):
         worker.set_name("><> %d" % (i + 1))
-        worker.setDaemon(True)
+        worker.daemon = True
         worker.start()
 
     # Wait while the workers are running
@@ -1576,7 +1600,7 @@ def cmd_run(args):
                             raise worker.fatal_error
 
                 # Log stats
-                logging.info("[fishnet v%s] Analyzed %d positions, crunched %d million nodes",
+                logging.info("[shoginet v%s] Analyzed %d positions, crunched %d million nodes",
                              __version__,
                              sum(worker.positions for worker in workers),
                              int(sum(worker.nodes for worker in workers) / 1000 / 1000))
@@ -1893,7 +1917,7 @@ def main(argv):
     g = parser.add_argument_group("advanced")
     g.add_argument("--endpoint", help="lishogi https endpoint (default: %s)" % DEFAULT_ENDPOINT)
     g.add_argument("--engine-dir", help="engine working directory")
-    g.add_argument("--stockfish-command", help="stockfish command (default: YaneuraOu-by-gcc)")
+    g.add_argument("--stockfish-command", help="stockfish command (default: fairy-stockfish-largeboards)")
     g.add_argument("--threads-per-process", "--threads", type=int, dest="threads", help="hint for the number of threads to use per engine process (default: %d)" % DEFAULT_THREADS)
     g.add_argument("--fixed-backoff", action="store_true", default=None, help="fixed backoff (only recommended for move servers)")
     g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
