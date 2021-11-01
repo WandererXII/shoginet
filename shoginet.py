@@ -1550,7 +1550,7 @@ def cmd_run(args):
         buckets[i % instances] += 1
 
     progress_reporter = ProgressReporter(len(buckets) + 4, conf)
-    progress_reporter.setDaemon(True)
+    progress_reporter.daemon = True
     progress_reporter.start()
 
     workers = [Worker(conf, bucket, memory // instances, progress_reporter) for bucket in buckets]
@@ -1558,7 +1558,7 @@ def cmd_run(args):
     # Start all threads
     for i, worker in enumerate(workers):
         worker.set_name("><> %d" % (i + 1))
-        worker.setDaemon(True)
+        worker.set.daemon = True
         worker.start()
 
     # Wait while the workers are running
