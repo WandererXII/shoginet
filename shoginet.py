@@ -1874,8 +1874,7 @@ def cmd_cpuid(argv):
                 print("%08x %08x %08x %08x %08x" % (eax, a, b, c, d))
 
 
-def main(argv):
-    # Parse command line arguments
+def parse_command_line(commands, argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verbose", "-v", default=0, action="count", help="increase verbosity")
     parser.add_argument("--version", action="version", version="fishnet v{0}".format(__version__))
@@ -1899,16 +1898,19 @@ def main(argv):
     g.add_argument("--no-fixed-backoff", dest="fixed_backoff", action="store_false", default=None)
     g.add_argument("--setoption", "-o", nargs=2, action="append", default=[], metavar=("NAME", "VALUE"), help="set a custom usi option")
 
+    parser.add_argument("command", default="run", nargs="?", choices=commands.keys())
+    return parser.parse_args(argv[1:])
+
+
+def main(argv):
+    # Parse command line arguments
     commands = collections.OrderedDict([
         ("run", cmd_run),
         ("configure", cmd_configure),
         ("systemd", cmd_systemd),
         ("cpuid", cmd_cpuid),
     ])
-
-    parser.add_argument("command", default="run", nargs="?", choices=commands.keys())
-
-    args = parser.parse_args(argv[1:])
+    args = parse_command_line(commands, argv)
 
     # Setup logging
     setup_logging(args.verbose,
