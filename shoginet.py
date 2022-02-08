@@ -117,6 +117,7 @@ CHECK_PYPI_CHANCE = 0.01
 LVL_SKILL = [-4, 0, 3, 6, 10, 14, 16, 18, 20]
 LVL_MOVETIMES = [50, 50, 100, 150, 200, 300, 400, 500, 1000]
 LVL_DEPTHS = [1, 1, 1, 2, 3, 5, 8, 13, 22]
+LVL_NODES = [1, 10, 0, 0, 0, 0, 0, 0, 0]
 
 
 def intro():
@@ -408,6 +409,8 @@ def isready(p):
         command, arg = recv_usi(p)
         if command == "readyok":
             break
+        elif command == "info" and arg.startswith("string Error! "):
+            logging.warning("Unexpected engine response to isready: %s %s", command, arg)
         elif command == "info" and arg.startswith("string "):
             pass
         else:
@@ -641,7 +644,7 @@ class Worker(threading.Thread):
     def stop(self):
         with self.status_lock:
             self.alive = False
-            self.kill_stockfish()
+            self.kill_engine()
             self.sleep.set()
 
     def stop_soon(self):
@@ -668,7 +671,7 @@ class Worker(threading.Thread):
     def run_inner(self):
         try:
             # Check if the engine is still alive and start, if necessary
-            self.start_stockfish()
+            self.start_engine()
 
             # Do the next work unit
             path, request = self.work()
@@ -683,7 +686,7 @@ class Worker(threading.Thread):
 
             if alive:
                 self.sleep.wait(t)
-                self.kill_stockfish()
+                self.kill_engine()
 
             return
 
@@ -752,7 +755,7 @@ class Worker(threading.Thread):
 
         self.job = None
 
-    def kill_stockfish(self):
+    def kill_engine(self):
         with self.stockfish_lock:
             if self.stockfish:
                 try:
@@ -761,7 +764,7 @@ class Worker(threading.Thread):
                     logging.exception("Failed to kill engine process.")
                 self.stockfish = None
 
-    def start_stockfish(self):
+    def start_engine(self):
         with self.stockfish_lock:
             # Check if already running.
             if self.stockfish and self.stockfish.poll() is None:
@@ -805,7 +808,6 @@ class Worker(threading.Thread):
 
     def work(self):
         result = self.make_request()
-
         if self.job and self.job["work"]["type"] == "analysis":
             result = self.analysis(self.job)
             return "analysis" + "/" + self.job["work"]["id"], result
@@ -850,12 +852,12 @@ class Worker(threading.Thread):
         start = time.time()
         part = go(self.stockfish, job["position"], moves,
                   movetime=movetime, clock=job["work"].get("clock"),
-                  depth=LVL_DEPTHS[lvl], variant=variant)
+                  depth=LVL_DEPTHS[lvl], nodes=LVL_NODES[lvl], variant=variant)
         end = time.time()
 
-        logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed, depth %d",
+        logging.log(PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed, depth %d, nodes %d",
                     self.job_name(job), variant,
-                    lvl, end - start, part.get("depth", 0))
+                    lvl, end - start, part.get("depth", 0), part.get("nodes", 0))
 
         self.nodes += part.get("nodes", 0)
         self.positions += 1
@@ -1050,8 +1052,8 @@ def download_github_release(conf, release_page, filename):
 
             if sys.stderr.isatty():
                 sys.stderr.write("\rDownloading %s: %d/%d (%d%%)" % (
-                    filename, progress, size,
-                    progress * 100 / size))
+                                    filename, progress, size,
+                                    progress * 100 / size))
                 sys.stderr.flush()
     if sys.stderr.isatty():
         sys.stderr.write("\n")
@@ -1329,7 +1331,7 @@ def validate_stockfish_command(stockfish_command, conf):
 
     # Ensure the required options are supported
     process = open_process(stockfish_command, engine_dir)
-    _, variants = usi(process)
+    _, variants = usi(process) # todo some checks
 
     kill_process(process)
 
