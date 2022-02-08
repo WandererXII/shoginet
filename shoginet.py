@@ -784,6 +784,8 @@ class Worker(threading.Thread):
         self.stockfish_info["options"] = {}
         self.stockfish_info["options"]["Threads"] = str(self.threads)
         self.stockfish_info["options"]["USI_Hash"] = str(self.memory)
+        self.stockfish_info["options"]["Use_NNUE"] = "true"
+        self.stockfish_info["options"]["EvalFile"] = "minishogi-32efe2ac350b.nnue"
 
         # Custom options
         if self.conf.has_section("Stockfish"):
