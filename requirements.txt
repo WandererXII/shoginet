@@ -1,0 +1,3 @@
+ConfigParser==5.2.0
+requests==2.27.1
+subprocess32==3.5.4
