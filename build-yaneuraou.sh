@@ -14,13 +14,12 @@ fi
 echo "- Determining CPU architecture..."
 
 ARCH=SSE42
-COMP=clang++
+COMP=g++
 
 case "$(uname -s)" in
   Darwin)
     if sysctl -a | grep machdep.cpu.leaf7_features | grep -q AVX2 ; then
       ARCH=AVX2
-      COMP=g++
     fi
     ;;
   Linux)
