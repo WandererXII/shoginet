@@ -14,18 +14,18 @@ fi
 echo "- Determining CPU architecture ..."
 
 ARCH=x86-64
-EXE=stockfish-x86_64
+EXE=fairy-stockfish-largeboard_x86-64
 
 if [ -f /proc/cpuinfo ]; then
     if grep "^flags" /proc/cpuinfo | grep -q popcnt ; then
         ARCH=x86-64-modern
-        EXE=stockfish-x86_64-modern
+        EXE=fairy-stockfish-largeboard_x86-64-modern
     fi
 
     if grep "^vendor_id" /proc/cpuinfo | grep -q Intel ; then
         if grep "^flags" /proc/cpuinfo | grep bmi2 | grep -q popcnt ; then
             ARCH=x86-64-bmi2
-            EXE=stockfish-x86_64-bmi2
+            EXE=fairy-stockfish-largeboard_x86-64-bmi2
         fi
     fi
 fi
