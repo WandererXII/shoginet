@@ -2,3 +2,4 @@
 *.ini
 YaneuraOu/
 Fairy-Stockfish/
+__pycache__/
