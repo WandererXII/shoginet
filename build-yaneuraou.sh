@@ -15,6 +15,7 @@ echo "- Determining CPU architecture..."
 
 ARCH=SSE42
 COMP=g++
+distFile="YaneuraOu-by-gcc-$ARCH"
 
 case "$(uname -s)" in
   Darwin)
@@ -36,6 +37,6 @@ echo "- Building YANEURAOU $ARCH ... (patience advised)"
 make TARGET_CPU=$ARCH YANEURAOU_EDITION=YANEURAOU_ENGINE_NNUE COMPILER=$COMP > /dev/null
 
 cd ../..
-mv ./YaneuraOu/source/YaneuraOu-by-gcc .
+mv ./YaneuraOu/source/YaneuraOu-by-gcc $distFile
 
 echo "- Done!"
