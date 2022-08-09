@@ -12,7 +12,7 @@ from logger import CensorLogFilter
 import consts
 import util
 import urllib.parse as urlparse
-from engines import Yaneuraou
+from engines import Engine
 from logger import log
 
 
@@ -33,8 +33,10 @@ def load_conf(args: typing.Any) -> configparser.ConfigParser:
 
     if hasattr(args, "engine_dir") and args.engine_dir is not None:
         conf.set("Shoginet", "EngineDir", args.engine_dir)
-    if hasattr(args, "stockfish_command") and args.stockfish_command is not None:
-        conf.set("Shoginet", "YaneraOuCommand", args.stockfish_command)
+    if hasattr(args, "yaneuraou_command") and args.yaneuraou_command is not None:
+        conf.set("Shoginet", "YaneraOuCommand", args.yaneuraou_command)
+    if hasattr(args, "fairy_command") and args.fairy_command is not None:
+        conf.set("Shoginet", "FairyCommand", args.fairy_command)
     if hasattr(args, "key") and args.key is not None:
         conf.set("Shoginet", "Key", args.key)
     if hasattr(args, "cores") and args.cores is not None:
@@ -47,8 +49,10 @@ def load_conf(args: typing.Any) -> configparser.ConfigParser:
         conf.set("Shoginet", "Endpoint", args.endpoint)
     if hasattr(args, "fixed_backoff") and args.fixed_backoff is not None:
         conf.set("Shoginet", "FixedBackoff", str(args.fixed_backoff))
-    for option_name, option_value in args.setoption:
+    for option_name, option_value in args.setoptionYaneuraou:
         conf.set("YaneuraOu", option_name.lower(), option_value)
+    for option_name, option_value in args.setoptionFairy:
+        conf.set("Fairy", option_name.lower(), option_value)
 
     log.addFilter(CensorLogFilter(conf_get(conf, "Key")))
 
@@ -91,6 +95,7 @@ def configure(args: typing.Any) -> configparser.ConfigParser:
     conf = configparser.ConfigParser()
     conf.add_section("Shoginet")
     conf.add_section("YaneuraOu")
+    conf.add_section("Fairy")
 
     # Ensure the config file is going to be writable
     config_file = os.path.abspath(args.conf or consts.DEFAULT_CONFIG)
@@ -116,14 +121,30 @@ def configure(args: typing.Any) -> configparser.ConfigParser:
     print("You can build custom YaneuraOu yourself and provide", file=out)
     print("the path or automatically download a precompiled binary.", file=out)
     print(file=out)
-    stockfish_command = config_input("Path or command (default is YaneuraOu-by-gcc): ",
-                                     lambda v: validate_stockfish_command(
+    yaneuraou_command = config_input("Path or command for yaneuraOu (default works on linux): ",
+                                     lambda v: validate_command(
                                          v, conf),
                                      out)
-    if not stockfish_command:
-        conf.remove_option("Shoginet", "StockfishCommand")
+    if not yaneuraou_command:
+        conf.remove_option("Shoginet", "YaneuraOuCommand")
     else:
-        conf.set("Shoginet", "StockfishCommand", stockfish_command)
+        conf.set("Shoginet", "YaneuraOuCommand", yaneuraou_command)
+
+    print(file=out)
+    print("Fairy-Stockfish is licensed under the GNU General Public License v3.", file=out)
+    print("You can find the source at: https://github.com/ianfab/Fairy-Stockfish", file=out)
+    print(file=out)
+    print("You can build custom Fairy-Stockfish yourself and provide", file=out)
+    print("the path or automatically download a precompiled binary.", file=out)
+    print(file=out)
+    fairy_command = config_input("Path or command for fairy stockfish (default works on linux): ",
+                                 lambda v: validate_command(
+                                     v, conf),
+                                 out)
+    if not fairy_command:
+        conf.remove_option("Shoginet", "FairyCommand")
+    else:
+        conf.set("Shoginet", "FairyCommand", fairy_command)
     print(file=out)
 
     # Cores
@@ -170,7 +191,7 @@ def configure(args: typing.Any) -> configparser.ConfigParser:
 
 def validate_engine_dir(engine_dir: typing.Optional[str]) -> str:
     if not engine_dir or not engine_dir.strip():
-        return os.path.abspath("../")
+        return os.path.abspath(".")
 
     engine_dir = os.path.abspath(os.path.expanduser(engine_dir.strip()))
 
@@ -180,20 +201,20 @@ def validate_engine_dir(engine_dir: typing.Optional[str]) -> str:
     return engine_dir
 
 
-def validate_stockfish_command(stockfish_command: typing.Optional[str], conf: configparser.ConfigParser) -> typing.Optional[str]:
-    if not stockfish_command or not stockfish_command.strip() or stockfish_command.strip().lower() == "download":
+def validate_command(command: typing.Optional[str], conf: configparser.ConfigParser) -> typing.Optional[str]:
+    if not command or not command.strip():
         return None
 
-    stockfish_command = stockfish_command.strip()
+    command = command.strip()
     engine_dir = get_engine_dir(conf)
 
     # Ensure the required options are supported
-    yane = Yaneuraou(stockfish_command, engine_dir)
-    yane.usi()
+    engine = Engine(False, command, engine_dir)
+    engine.usi()
 
-    del yane
+    del engine
 
-    return stockfish_command
+    return command
 
 
 def validate_cores(cores: typing.Optional[str]) -> int:
@@ -310,13 +331,23 @@ def get_endpoint(conf: configparser.ConfigParser, sub: str = "") -> str:
 
 
 def get_yaneuraou_command(conf: configparser.ConfigParser, update: bool = True) -> str:
-    stockfish_command = validate_stockfish_command(
-        conf_get(conf, "StockfishCommand"), conf)
-    if not stockfish_command:
+    yane_command = validate_command(
+        conf_get(conf, "YaneuraOuCommand"), conf)
+    if not yane_command:
         filename = util.yaneuraou_filename()
-        return typing.cast(str, validate_stockfish_command(os.path.join(".", filename), conf))
+        return typing.cast(str, validate_command(os.path.join(".", filename), conf))
     else:
-        return stockfish_command
+        return yane_command
+
+
+def get_fairy_command(conf: configparser.ConfigParser, update: bool = True) -> str:
+    fairy_command = validate_command(
+        conf_get(conf, "FairyCommand"), conf)
+    if not fairy_command:
+        filename = util.fairy_filename()
+        return typing.cast(str, validate_command(os.path.join(".", filename), conf))
+    else:
+        return fairy_command
 
 
 def get_key(conf: configparser.ConfigParser) -> str:

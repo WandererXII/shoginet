@@ -8,9 +8,9 @@ from consts import ENGINE
 from logger import log
 
 
-class Yaneuraou:
+class Engine:
 
-    def __init__(self, command: str, cwd: typing.Optional[str] = None, shell: bool = True, _popen_lock: threading.Lock = threading.Lock()) -> None:
+    def __init__(self, variants: bool, command: str, cwd: typing.Optional[str] = None, shell: bool = True, _popen_lock: threading.Lock = threading.Lock()) -> None:
         kwargs: dict[str, typing.Any] = {
             "shell": shell,
             "stdout": subprocess.PIPE,
@@ -25,12 +25,12 @@ class Yaneuraou:
 
         # Prevent signal propagation from parent process
         if sys.platform == "win32":
-            # Windows
             kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
         else:
-            # Unix
             kwargs["preexec_fn"] = os.setpgrp
 
+        self.variants = variants
+        self.name = "fairy" if variants else "yaneuraou"
         with _popen_lock:
             self.engine_proccess = subprocess.Popen(command, **kwargs)
 
@@ -48,7 +48,8 @@ class Yaneuraou:
             pass
 
     def send(self, line: str) -> None:
-        log.log(ENGINE, "%s << %s", self.engine_proccess.pid, line)
+        log.log(ENGINE, "%s(%s) << %s",
+                self.engine_proccess.pid, self.name, line)
         assert self.engine_proccess.stdin is not None
         self.engine_proccess.stdin.write(line + "\n")
         self.engine_proccess.stdin.flush()
@@ -62,7 +63,8 @@ class Yaneuraou:
 
             line = line.rstrip()
 
-            log.log(ENGINE, "%s >> %s", self.engine_proccess.pid, line)
+            log.log(ENGINE, "%s(%s) >> %s",
+                    self.engine_proccess.pid, self.name, line)
 
             if line:
                 return line
@@ -88,7 +90,7 @@ class Yaneuraou:
                 name_and_value = arg.split(None, 1)
                 if len(name_and_value) == 2:
                     engine_info[name_and_value[0]] = name_and_value[1]
-            elif command == "option":
+            elif command == "option" or command == "Fairy-Stockfish":
                 pass
             else:
                 log.warning(
@@ -117,20 +119,20 @@ class Yaneuraou:
         self.send("setoption name %s value %s" % (name, value))
 
     def set_variant_options(self, variant: str) -> None:
-        pass
-   #variant = variant.lower()
-
-   # if variant == "standard":
-   #    self.setoption("USI_Variant", "shogi")
-   # else:
-   #    self.setoption("USI_Variant", variant)
+        if not self.variants:
+            return
+        variant = variant.lower()
+        if variant == "standard":
+            self.setoption("USI_Variant", "shogi")
+        else:
+            self.setoption("USI_Variant", variant)
 
     def recv_bestmove(self) -> typing.Optional[str]:
         while True:
             command, arg = self.recv_usi()
             if command == "bestmove":
                 bestmove = arg.split()[0]
-                if bestmove and bestmove != "(none)":
+                if bestmove and bestmove != "(none)" and bestmove != "resign":
                     return bestmove
                 else:
                     return None
@@ -143,17 +145,17 @@ class Yaneuraou:
     def encode_score(self, kind: str, value: int) -> int:
         if kind == "mate":
             if value > 0:
-                return 32000 - value
+                return 102_000 - value
             else:
-                return -32000 - value
+                return -102_000 - value
         else:
-            return min(max(value, -30000), 30000)
+            return min(max(value, -100_000), 100_000)
 
     def decode_score(self, score: int) -> typing.Any:
-        if score > 30000:
-            return {"mate": 32000 - score}
-        elif score < -30000:
-            return {"mate": -32000 - score}
+        if score > 100_000:
+            return {"mate": 102_000 - score}
+        elif score < -100_000:
+            return {"mate": -102_000 - score}
         else:
             return {"cp": score}
 
@@ -177,7 +179,7 @@ class Yaneuraou:
                 def set_table(arr: typing.List[typing.Any], value: typing.Any) -> None:
                     while len(arr) < multipv:
                         arr.append([])
-                    while depth and len(arr[multipv - 1]) <= depth:
+                    while len(arr[multipv - 1]) <= (depth or 0):
                         arr[multipv - 1].append(None)
                     arr[multipv - 1][depth] = value
 
@@ -196,7 +198,6 @@ class Yaneuraou:
                     elif parameter == "score":
                         kind = tokens.pop(0)
                         value = self.encode_score(kind, int(tokens.pop(0)))
-
                         is_bound = False
                         if tokens and tokens[0] in ["lowerbound", "upperbound"]:
                             is_bound = True

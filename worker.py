@@ -9,10 +9,10 @@ import consts
 import json
 import requests
 from errors import UpdateRequired
-from config import get_endpoint, get_engine_dir, conf_get, get_yaneuraou_command, get_key
+from config import get_endpoint, get_engine_dir, conf_get, get_yaneuraou_command, get_fairy_command, get_key
 from logger import log
 import time
-from engines import Yaneuraou
+from engines import Engine
 
 
 class Worker(threading.Thread):
@@ -20,7 +20,7 @@ class Worker(threading.Thread):
         super(Worker, self).__init__()
         self.conf = conf
         self.threads = threads
-        self.memory = memory
+        self.memory = memory // 2  # split between fairy and yane
 
         self.progress_reporter = progress_reporter
 
@@ -34,8 +34,10 @@ class Worker(threading.Thread):
         self.positions = 0
 
         self.engines_lock = threading.RLock()
-        self.yaneuraou: typing.Optional[Yaneuraou] = None
+        self.yaneuraou: typing.Optional[Engine] = None
+        self.fairy: typing.Optional[Engine] = None
         self.yaneuraou_info: typing.Any = None
+        self.fairy_info: typing.Any = None
 
         self.job = None
         self.backoff = start_backoff(self.conf)
@@ -87,7 +89,7 @@ class Worker(threading.Thread):
     def run_inner(self) -> None:
         try:
             # Check if the engine is still alive and start, if necessary
-            self.start_engine()
+            self.start_engines()
 
             # Do the next work unit
             path, request = self.work()
@@ -193,42 +195,56 @@ class Worker(threading.Thread):
                     log.exception("Failed to kill engine process.")
                 self.yaneuraou = None
 
-    def start_engine(self) -> None:
+    def start_engines(self) -> None:
+        def start_fairy() -> None:
+            if not self.fairy or self.fairy.engine_proccess.poll() is not None:
+                self.fairy = Engine(True, get_fairy_command(self.conf, False),
+                                    get_engine_dir(self.conf))
+                self.fairy_info = typing.cast(typing.Any, self.fairy.usi())
+                self.fairy_info.pop("author", None)
+                log.info("Started %s, threads: %s (%d), pid: %d",
+                         self.fairy_info.get("name", "Fairy stockfish <?>"),
+                         "+" * self.threads, self.threads, self.fairy.engine_proccess.pid)
+                self.fairy_info["options"] = {}
+                self.fairy_info["options"]["Threads"] = str(self.threads)
+                self.fairy_info["options"]["USI_Hash"] = str(self.memory)
+                # Custom options
+                if self.conf.has_section("Fairy"):
+                    for name, value in self.conf.items("Fairy"):
+                        self.fairy_info["options"][name] = value
+                for name, value in self.fairy_info["options"].items():
+                    self.fairy.setoption(name, value)
+                self.fairy.isready()
+
+        def start_yane() -> None:
+            if not self.yaneuraou or self.yaneuraou.engine_proccess.poll() is not None:
+                self.yaneuraou = Engine(False, get_yaneuraou_command(self.conf, False),
+                                        get_engine_dir(self.conf))
+                self.yaneuraou_info = typing.cast(
+                    typing.Any, self.yaneuraou.usi())
+                self.yaneuraou_info.pop("author", None)
+                log.info("Started %s, threads: %s (%d), pid: %d",
+                         self.yaneuraou_info.get("name", "YaneuraOu <?>"),
+                         "+" * self.threads, self.threads, self.yaneuraou.engine_proccess.pid)
+                self.yaneuraou_info["options"] = {}
+                self.yaneuraou_info["options"]["Threads"] = str(self.threads)
+                self.yaneuraou_info["options"]["USI_Hash"] = str(self.memory)
+                self.yaneuraou_info["options"]["EnteringKingRule"] = "CSARule27H"
+                self.yaneuraou_info["options"]["BookFile"] = "no_book"
+                self.yaneuraou_info["options"]["ConsiderationMode"] = "true"
+                self.yaneuraou_info["options"]["OutputFailLHPV"] = "true"
+                # Custom options
+                if self.conf.has_section("YaneuraOu"):
+                    for name, value in self.conf.items("YaneuraOu"):
+                        self.yaneuraou_info["options"][name] = value
+                for name, value in self.yaneuraou_info["options"].items():
+                    self.yaneuraou.setoption(name, value)
+                self.yaneuraou.isready()
+
         with self.engines_lock:
-            # Check if already running.
-            if self.yaneuraou and self.yaneuraou.engine_proccess.poll() is None:
-                return
-
-            # Start process
-            self.yaneuraou = Yaneuraou(get_yaneuraou_command(self.conf, False),
-                                       get_engine_dir(self.conf))
-
-        self.yaneuraou_info = typing.cast(typing.Any, self.yaneuraou.usi())
-        self.yaneuraou_info.pop("author", None)
-        log.info("Started %s, threads: %s (%d), pid: %d",
-                 self.yaneuraou_info.get("name", "YaneuraOu <?>"),
-                 "+" * self.threads, self.threads, self.yaneuraou.engine_proccess.pid)
-
-        # Prepare USI options
-        self.yaneuraou_info["options"] = {}
-        self.yaneuraou_info["options"]["Threads"] = str(self.threads)
-        self.yaneuraou_info["options"]["USI_Hash"] = str(self.memory)
-        self.yaneuraou_info["options"]["EnteringKingRule"] = "CSARule27H"
-        self.yaneuraou_info["options"]["BookFile"] = "no_book"
-        self.yaneuraou_info["options"]["ConsiderationMode"] = "true"
-        self.yaneuraou_info["options"]["OutputFailLHPV"] = "true"
-        # self.stockfish_info["options"]["analysis contempt"] = "Off"
-
-        # Custom options
-        if self.conf.has_section("YaneuraOu"):
-            for name, value in self.conf.items("YaneuraOu"):
-                self.yaneuraou_info["options"][name] = value
-
-        # Set USI options
-        for name, value in self.yaneuraou_info["options"].items():
-            self.yaneuraou.setoption(name, value)
-
-        self.yaneuraou.isready()
+            # Checks if already running.
+            start_fairy()
+            start_yane()
 
     def make_request(self) -> typing.Any:
         return {
@@ -238,6 +254,7 @@ class Worker(threading.Thread):
                 "apikey": get_key(self.conf),
             },
             "yaneuraou": self.yaneuraou_info,
+            "fairy": self.fairy_info,
         }
 
     def work(self) -> typing.Tuple[str, typing.Any]:
@@ -270,31 +287,40 @@ class Worker(threading.Thread):
     def bestmove(self, job: typing.Any) -> str:
         lvl = job["work"]["level"]
         variant = job.get("variant", "standard")
+        useFairy = job["work"].get("flavor", "yaneuraou") == "fairy"
         moves = job["moves"].split(" ")
 
         log.debug("Playing %s with lvl %d",
                   self.job_name(job), lvl)
 
-        assert self.yaneuraou is not None
-        self.yaneuraou.set_variant_options(variant)
-        self.yaneuraou.setoption("SkillLevel", consts.LVL_SKILL[lvl])
-        self.yaneuraou.setoption("MultiPV", "1")
-        self.yaneuraou.send("usinewgame")
-        self.yaneuraou.isready()
+        if useFairy:
+            engine = self.fairy
+        else:
+            engine = self.yaneuraou
+
+        assert engine is not None
+        engine.set_variant_options(variant)
+        if useFairy:
+            engine.setoption("Skill_Level", consts.LVL_SKILL[lvl])
+        else:
+            engine.setoption("SkillLevel", consts.LVL_SKILL[lvl])
+        engine.setoption("MultiPV", "1")
+        engine.send("usinewgame")
+        engine.isready()
 
         movetime = int(
             round(consts.LVL_MOVETIMES[lvl] / (self.threads * 0.9 ** (self.threads - 1))))
 
         start = time.time()
-        self.yaneuraou.go(job["position"], moves,
-                          movetime=movetime, clock=job["work"].get(
+        engine.go(job["position"], moves,
+                  movetime=movetime, clock=job["work"].get(
             "clock"),
             depth=consts.LVL_DEPTHS[lvl], nodes=consts.LVL_NODES[lvl])
-        bestmove = self.yaneuraou.recv_bestmove()
+        bestmove = engine.recv_bestmove()
         end = time.time()
 
-        log.log(consts.PROGRESS, "Played move in %s (%s) with lvl %d: %0.3fs elapsed",
-                self.job_name(job), variant,
+        log.log(consts.PROGRESS, "Engine(%s) played move(%s) in %s (%s) with lvl %d: %0.3fs elapsed",
+                engine.name, bestmove, self.job_name(job), variant,
                 lvl, end - start)
 
         self.positions += 1
@@ -307,6 +333,7 @@ class Worker(threading.Thread):
 
     def analysis(self, job: typing.Any) -> typing.Any:
         variant = job.get("variant", "standard")
+        useFairy = job["work"].get("flavor", "yaneuraou") == "fairy"
         moves = job["moves"].split(" ")
 
         result = self.make_request()
@@ -316,11 +343,22 @@ class Worker(threading.Thread):
         nodes = job.get("nodes") or 3500000
         skip = job.get("skipPositions", [])
 
-        assert self.yaneuraou is not None
-        self.yaneuraou.setoption("SkillLevel", '20')
-        self.yaneuraou.setoption("MultiPV", multipv or '1')
-        self.yaneuraou.send("usinewgame")
-        self.yaneuraou.isready()
+        if useFairy:
+            engine = self.fairy
+        else:
+            engine = self.yaneuraou
+
+        assert engine is not None
+        engine.set_variant_options(variant)
+        if useFairy:
+            engine.setoption("Skill_Level", '20')
+        else:
+            engine.setoption("SkillLevel", '20')
+        engine.setoption("MultiPV", multipv or '1')
+        if (useFairy):
+            engine.setoption("USI_AnalyseMode", 'true')
+        engine.send("usinewgame")
+        engine.isready()
 
         if multipv is None:
             result["analysis"] = [None for _ in range(len(moves) + 1)]
@@ -347,14 +385,14 @@ class Worker(threading.Thread):
             log.log(consts.PROGRESS, "Analysing: %s",
                     self.job_name(job, ply))
 
-            self.yaneuraou.go(job["position"], moves[0:ply],
-                              nodes=nodes, movetime=8000)
-            scores, nodes, times, pvs = self.yaneuraou.recv_analysis()
+            engine.go(job["position"], moves[0:ply],
+                      nodes=nodes, movetime=8000)
+            scores, nodes, times, pvs = engine.recv_analysis()
             if multipv is None:
                 depth = len(scores[0]) - 1
                 result["analysis"][ply] = {
                     "depth": depth,
-                    "score": self.yaneuraou.decode_score(scores[0][depth]),
+                    "score": engine.decode_score(scores[0][depth]),
                 }
                 try:
                     result["analysis"][ply]["nodes"] = n = nodes[0][depth]
@@ -383,9 +421,9 @@ class Worker(threading.Thread):
         end = time.time()
 
         if num_positions:
-            log.info("%s took %0.1fs (%0.2fs per position)",
+            log.info("%s took %0.1fs (%0.2fs per position - %s)",
                      self.job_name(job),
-                     end - start, (end - start) / num_positions)
+                     end - start, (end - start) / num_positions, engine.name)
         else:
             log.info("%s done (nothing to do)", self.job_name(job))
 

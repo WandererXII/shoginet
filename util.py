@@ -4,6 +4,7 @@ import sys
 import platform
 import urllib.parse as urlparse
 from errors import ConfigError
+from cpuid import detect_cpu_capabilities
 
 
 def parse_bool(inp: typing.Any, default: bool = False) -> bool:
@@ -30,9 +31,36 @@ def base_url(url: str) -> str:
 def yaneuraou_filename() -> str:
     machine = platform.machine().lower()
 
+    vendor, modern, bmi2, sse42, avx2 = detect_cpu_capabilities()
+    if sse42 and "Intel" in vendor and avx2:
+        suffix = "-AVX2"
+    elif sse42 and "Intel" in vendor:
+        suffix = "-SSE42"
+    else:
+        suffix = ""
+
     if os.name == "nt":
-        return "YaneuraOu-%s%s.exe" % machine
+        return "YaneuraOu-%s%s.exe" % (machine, suffix)
     elif os.name == "os2" or sys.platform == "darwin":
         return "YaneuraOu-by-gcc"
     else:
-        return "YaneuraOu-by-gcc"
+        return "YaneuraOu-by-gcc%s" % suffix
+
+
+def fairy_filename() -> str:
+    machine = platform.machine().lower()
+
+    vendor, modern, bmi2, sse42, avx2 = detect_cpu_capabilities()
+    if modern and "Intel" in vendor and bmi2:
+        suffix = "-bmi2"
+    elif modern:
+        suffix = "-modern"
+    else:
+        suffix = ""
+
+    if os.name == "nt":
+        return "fairy-stockfish-largeboard_x86-64%s%s.exe" % (machine, suffix)
+    elif os.name == "os2" or sys.platform == "darwin":
+        return "fairy-stockfish-largeboard_x86-64"
+    else:
+        return "fairy-stockfish-largeboard_x86-64%s" % suffix

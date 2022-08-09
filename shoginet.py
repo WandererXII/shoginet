@@ -5,7 +5,7 @@ import sys
 import platform
 import requests
 import consts
-from config import configure, load_conf, validate_stockfish_command, conf_get, get_yaneuraou_command, get_engine_dir, get_key, validate_cores, validate_memory, validate_threads, get_endpoint
+from config import configure, load_conf, validate_command, conf_get, get_yaneuraou_command, get_fairy_command, get_engine_dir, get_key, validate_cores, validate_memory, validate_threads, get_endpoint
 import util
 import errors
 from worker import Worker
@@ -14,15 +14,21 @@ import signals
 from logger import log
 from systemd import systemd
 from intro import intro
+from cpuid import cpuid
 
 
 def cmd_run(args: typing.Any) -> int:
     conf = load_conf(args)
 
-    engine_command = validate_stockfish_command(
-        conf_get(conf, "EngineCommand"), conf)
-    if not engine_command:
-        engine_command = get_yaneuraou_command(conf)
+    yane_command = validate_command(
+        conf_get(conf, "YaneuraOuCommand"), conf)
+    if not yane_command:
+        yane_command = get_yaneuraou_command(conf)
+
+    fairy_command = validate_command(
+        conf_get(conf, "FairyCommand"), conf)
+    if not fairy_command:
+        fairy_command = get_fairy_command(conf)
 
     print()
     print("### Checking configuration ...")
@@ -30,7 +36,8 @@ def cmd_run(args: typing.Any) -> int:
     print("Python:           %s (with requests %s)" %
           (platform.python_version(), requests.__version__))
     print("EngineDir:        %s" % get_engine_dir(conf))
-    print("StockfishCommand: %s" % engine_command)
+    print("YaneuraOuCommand: %s" % yane_command)
+    print("FairyCommand:     %s" % fairy_command)
     print("Key:              %s" % (("*" * len(get_key(conf))) or "(none)"))
 
     cores = validate_cores(conf_get(conf, "Cores"))
@@ -69,7 +76,7 @@ def cmd_run(args: typing.Any) -> int:
         buckets[i % instances] += 1
 
     progress_reporter = ProgressReporter(len(buckets) + 4, conf)
-    progress_reporter.setDaemon(True)
+    progress_reporter.daemon = True
     progress_reporter.start()
 
     workers = [Worker(conf, bucket, memory // instances,
@@ -78,7 +85,7 @@ def cmd_run(args: typing.Any) -> int:
     # Start all threads
     for i, worker in enumerate(workers):
         worker.set_name("><> %d" % (i + 1))
-        worker.setDaemon(True)
+        worker.daemon = True
         worker.start()
 
     # Wait while the workers are running
@@ -96,12 +103,12 @@ def cmd_run(args: typing.Any) -> int:
                             raise worker.fatal_error
 
                 # Log stats
-                log.info("[fishnet v%s] Analyzed %d positions, crunched %d million nodes",
+                log.info("[shoginet v%s] Analyzed %d positions, crunched %d million nodes",
                          consts.SN_VERSION,
                          sum(worker.positions for worker in workers),
                          int(sum(worker.nodes for worker in workers) / 1000 / 1000))
 
-        except signals.ShutdownSoon:
+        except errors.ShutdownSoon:
             handler = signals.SignalHandler()
 
             if any(worker.job for worker in workers):
@@ -114,7 +121,7 @@ def cmd_run(args: typing.Any) -> int:
             for worker in workers:
                 while not worker.finished.wait(0.5):
                     pass
-    except (signals.Shutdown, signals.ShutdownSoon):
+    except (errors.Shutdown, errors.ShutdownSoon):
         if any(worker.job for worker in workers):
             log.info("\n\n### Good bye! Aborting pending jobs ...\n")
         else:
@@ -145,6 +152,11 @@ def cmd_systemd(args: typing.Any) -> int:
     return 0
 
 
+def cmd_cpuid(argv: typing.Any) -> int:
+    cpuid()
+    return 0
+
+
 def main(argv: typing.Any) -> int:
     # Parse command line arguments
     parser = argparse.ArgumentParser(description=__doc__)
@@ -171,8 +183,10 @@ def main(argv: typing.Any) -> int:
     g.add_argument(
         "--endpoint", help="lishogi https endpoint (default: %s)" % consts.DEFAULT_ENDPOINT)
     g.add_argument("--engine-dir", help="engine working directory")
-    g.add_argument("--stockfish-command",
-                   help="stockfish command (default: YaneuraOu-by-gcc)")
+    g.add_argument("--yaneuraou-command",
+                   help="YaneuraOu command (default: YaneuraOu-by-gcc)")
+    g.add_argument("--fairy-command",
+                   help="Fairy stockfish command (default: fairy-stockfish-largeboard_x86-64)")
     g.add_argument("--threads-per-process", "--threads", type=int, dest="threads",
                    help="hint for the number of threads to use per engine process (default: %d)" % consts.DEFAULT_THREADS)
     g.add_argument("--fixed-backoff", action="store_true", default=None,
@@ -186,6 +200,7 @@ def main(argv: typing.Any) -> int:
         ("run", cmd_run),
         ("configure", cmd_configure),
         ("systemd", cmd_systemd),
+        ("cpuid", cmd_cpuid),
     ])
 
     parser.add_argument("command", default="run",
@@ -204,7 +219,7 @@ def main(argv: typing.Any) -> int:
     except errors.ConfigError:
         log.exception("Configuration error")
         return 78
-    except (KeyboardInterrupt, signals.Shutdown, signals.ShutdownSoon):
+    except (KeyboardInterrupt, errors.Shutdown, errors.ShutdownSoon):
         return 0
 
 

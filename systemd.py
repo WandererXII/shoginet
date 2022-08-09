@@ -1,5 +1,5 @@
 import consts
-from config import load_conf, validate_key, validate_engine_dir, validate_stockfish_command, validate_memory, validate_threads, validate_cores, validate_endpoint
+from config import load_conf, validate_key, validate_engine_dir, validate_command, validate_memory, validate_threads, validate_cores, validate_endpoint
 import typing
 import textwrap
 from shlex import quote as shell_quote
@@ -58,11 +58,16 @@ def systemd(args: typing.Any) -> None:
     if args.engine_dir is not None:
         builder.append("--engine-dir")
         builder.append(shell_quote(validate_engine_dir(args.engine_dir)))
-    engine_command = validate_stockfish_command(args.stockfish_command, conf)
-    if args.stockfish_command is not None and engine_command is not None:
-        builder.append("--stockfish-command")
+    yane_command = validate_command(args.yaneuraou_command, conf)
+    if args.yaneuraou_command is not None and yane_command is not None:
+        builder.append("--yaneuraou-command")
         builder.append(shell_quote(
-            engine_command))
+            yane_command))
+    fairy_command = validate_command(args.fairy_command, conf)
+    if args.fairy_command is not None and fairy_command is not None:
+        builder.append("--fairy-command")
+        builder.append(shell_quote(
+            fairy_command))
     if args.cores is not None:
         builder.append("--cores")
         builder.append(shell_quote(str(validate_cores(args.cores))))
@@ -110,7 +115,7 @@ def systemd(args: typing.Any) -> None:
 
     if sys.stdout.isatty():
         print("\n# Example usage:", file=sys.stderr)
-        print("# python -m fishnet systemd | sudo tee /etc/systemd/system/shoginet.service", file=sys.stderr)
+        print("# python -m shoginet systemd | sudo tee /etc/systemd/system/shoginet.service", file=sys.stderr)
         print("# sudo systemctl enable shoginet.service", file=sys.stderr)
         print("# sudo systemctl start shoginet.service", file=sys.stderr)
         print("#", file=sys.stderr)
