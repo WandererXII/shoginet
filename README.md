@@ -8,18 +8,22 @@ Based on [fairyfishnet](https://github.com/gbtami/fairyfishnet).
 
 You need to have YaneuraOu for NNUE ready. To achieve this you can use the provided script `build-yaneuraou.sh`. The script first clones [YaneuraOu github](https://github.com/yaneurao/YaneuraOu) and then runs the make command either with avx2 or sse42 depending on your cpu.
 You can also try using the provided precompiled 'YaneuraOu-by-gcc' for intel with avx2, if that works for you or build YaneuraOu with some script in YaneuraOu/script.
+You can also try downloading YaneuraOu from https://github.com/mizar/YaneuraOu/releases.
 To test that engine works on you machine just run the engine `./YaneuraOu-by-gcc`.
 
 ```
 usi
 isready
 ```
+
 after readyOk appears run:
 `bench`
 If the engine didn't crash, it probably works.
 
-If you have YaneuraOu ready and python3 installed just run `python3 ./shoginet.py`, it will ask you about what working directory you want to use, path to the engine and similar things, leaving everything default should be fine. Currently no key is required.
-If you want to go over this setup step again, just delete fishnet.ini.
+The same is necessary for Fairy-Stockfish, binaries for linux are once again provided, but for other platforms consider compiling them yourself of downloading them from https://github.com/ianfab/Fairy-Stockfish/releases.
+
+If you have YaneuraOu and Fairy-Stockfish ready and python3 installed just run `python3 ./shoginet.py`, it will ask you about what working directory you want to use, path to the engine and similar things, leaving everything default should be fine. Currently no key is required.
+If you want to go over this setup step again, just delete shoginet.ini.
 
 #### Windows
 
