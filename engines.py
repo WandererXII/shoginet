@@ -216,7 +216,7 @@ class Engine:
                 log.warning(
                     "Unexpected engine response to go: %s %s", command, arg)
 
-    def go(self, position: str, moves: typing.List[str], movetime: int = None, clock: typing.Optional[dict[str, int]] = None, depth: int = None, nodes: int = None) -> None:
+    def go(self, position: str, moves: typing.List[str], movetime: typing.Optional[int] = None, clock: typing.Optional[typing.Dict[str, int]] = None, depth: typing.Optional[int] = None, nodes: typing.Optional[int] = None) -> None:
         self.send("position sfen %s moves %s" % (position, " ".join(moves)))
 
         builder = []
