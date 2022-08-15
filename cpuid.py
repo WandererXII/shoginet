@@ -145,7 +145,7 @@ def make_cpuid() -> typing.Any:
 
 
 def open_process(command: typing.List[str], cwd: typing.Optional[str] = None, shell: bool = True, _popen_lock: threading.Lock = threading.Lock()) -> subprocess.Popen:
-    kwargs: dict[str, typing.Any] = {
+    kwargs: typing.Dict[str, typing.Any] = {
         "shell": shell,
         "stdout": subprocess.PIPE,
         "stderr": subprocess.STDOUT,

@@ -11,7 +11,7 @@ from logger import log
 class Engine:
 
     def __init__(self, variants: bool, command: str, cwd: typing.Optional[str] = None, shell: bool = True, _popen_lock: threading.Lock = threading.Lock()) -> None:
-        kwargs: dict[str, typing.Any] = {
+        kwargs: typing.Dict[str, typing.Any] = {
             "shell": shell,
             "stdout": subprocess.PIPE,
             "stderr": subprocess.STDOUT,
@@ -76,10 +76,10 @@ class Engine:
         else:
             return command_and_args
 
-    def usi(self) -> dict[str, str]:
+    def usi(self) -> typing.Dict[str, str]:
         self.send("usi")
 
-        engine_info: dict[str, str] = {}
+        engine_info: typing.Dict[str, str] = {}
 
         while True:
             command, arg = self.recv_usi()
@@ -216,7 +216,7 @@ class Engine:
                 log.warning(
                     "Unexpected engine response to go: %s %s", command, arg)
 
-    def go(self, position: str, moves: list[str], movetime: int = None, clock: typing.Optional[dict[str, int]] = None, depth: int = None, nodes: int = None) -> None:
+    def go(self, position: str, moves: typing.List[str], movetime: int = None, clock: typing.Optional[dict[str, int]] = None, depth: int = None, nodes: int = None) -> None:
         self.send("position sfen %s moves %s" % (position, " ".join(moves)))
 
         builder = []
