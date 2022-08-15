@@ -193,8 +193,10 @@ def main(argv: typing.Any) -> int:
                    help="fixed backoff (only recommended for move servers)")
     g.add_argument("--no-fixed-backoff", dest="fixed_backoff",
                    action="store_false", default=None)
-    g.add_argument("--setoption", "-o", nargs=2, action="append", default=[],
-                   metavar=("NAME", "VALUE"), help="set a custom usi option")
+    g.add_argument("--setoptionYaneuraou", nargs=2, action="append", default=[],
+                   metavar=("NAME", "VALUE"), help="set a custom usi option for YaneuraOu")
+    g.add_argument("--setoptionFairy", nargs=2, action="append", default=[],
+                   metavar=("NAME", "VALUE"), help="set a custom usi option for Fairy Stockfish")
 
     commands = collections.OrderedDict([
         ("run", cmd_run),

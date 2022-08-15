@@ -83,8 +83,12 @@ def systemd(args: typing.Any) -> None:
     if args.fixed_backoff is not None:
         builder.append(
             "--fixed-backoff" if args.fixed_backoff else "--no-fixed-backoff")
-    for option_name, option_value in args.setoption:
-        builder.append("--setoption")
+    for option_name, option_value in args.setoptionYaneuraou:
+        builder.append("--setoptionYaneuraou")
+        builder.append(shell_quote(option_name))
+        builder.append(shell_quote(option_value))
+    for option_name, option_value in args.setoptionFairy:
+        builder.append("--setoptionFairy")
         builder.append(shell_quote(option_name))
         builder.append(shell_quote(option_value))
     if args.auto_update:
