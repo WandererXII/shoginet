@@ -15,7 +15,6 @@ echo "- Determining CPU architecture..."
 
 ARCH=SSE42
 COMP=g++
-distFile="YaneuraOu-by-gcc-$ARCH"
 
 case "$(uname -s)" in
   Darwin)
@@ -31,6 +30,8 @@ case "$(uname -s)" in
     fi
     ;;
 esac
+
+distFile="YaneuraOu-by-gcc-$ARCH"
 
 echo "- Building YANEURAOU $ARCH ... (patience advised)"
 
