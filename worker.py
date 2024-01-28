@@ -286,6 +286,7 @@ class Worker(threading.Thread):
 
     def bestmove(self, job: typing.Any) -> str:
         lvl = job["work"]["level"]
+        lvlIndex = lvl - 1
         variant = job.get("variant", "standard")
         useFairy = job["work"].get("flavor", "yaneuraou") == "fairy"
         moves = job["moves"].split(" ")
@@ -301,21 +302,21 @@ class Worker(threading.Thread):
         assert engine is not None
         engine.set_variant_options(variant)
         if useFairy:
-            engine.setoption("Skill_Level", consts.LVL_SKILL[lvl])
+            engine.setoption("Skill_Level", consts.LVL_SKILL[lvlIndex])
         else:
-            engine.setoption("SkillLevel", consts.LVL_SKILL[lvl])
+            engine.setoption("SkillLevel", max(consts.LVL_SKILL[lvlIndex], 0))
         engine.setoption("MultiPV", "1")
         engine.send("usinewgame")
         engine.isready()
 
         movetime = int(
-            round(consts.LVL_MOVETIMES[lvl] / (self.threads * 0.9 ** (self.threads - 1))))
-
+            round(consts.LVL_MOVETIMES[lvlIndex] / (self.threads * 0.9 ** (self.threads - 1))))
+        print(lvl, consts.LVL_NODES[lvlIndex], "Skill:", max(consts.LVL_SKILL[lvlIndex], 0))
         start = time.time()
         engine.go(job["position"], moves,
                   movetime=movetime, clock=job["work"].get(
             "clock"),
-            depth=consts.LVL_DEPTHS[lvl], nodes=consts.LVL_NODES[lvl])
+            depth=consts.LVL_DEPTHS[lvlIndex], nodes=(None if useFairy else consts.LVL_NODES[lvlIndex]))
         bestmove = engine.recv_bestmove()
         end = time.time()
 
