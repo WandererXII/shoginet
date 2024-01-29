@@ -78,8 +78,8 @@ class CensorLogFilter(logging.Filter):
     def __init__(self, keyword: typing.Optional[str]) -> None:
         self.keyword = keyword
 
-    def censor(self, msg: str) -> str:
-        if self.keyword:
+    def censor(self, msg: typing.Any) -> str:
+        if self.keyword and type(msg) is str:
             return msg.replace(self.keyword, "*" * len(self.keyword))
         else:
             return msg
