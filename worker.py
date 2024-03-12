@@ -266,6 +266,9 @@ class Worker(threading.Thread):
         elif self.job and self.job["work"]["type"] == "move":
             result = self.bestmove(self.job)
             return "move" + "/" + self.job["work"]["id"], result
+        elif self.job and self.job["work"]["type"] == "puzzle":
+            result = self.puzzle(self.job)
+            return "puzzle" + "/" + self.job["work"]["id"], result
         else:
             if self.job:
                 log.error("Invalid job type: %s", self.job["work"]["type"])
@@ -274,7 +277,10 @@ class Worker(threading.Thread):
 
     def job_name(self, job: typing.Any, ply: typing.Optional[int] = None) -> str:
         builder = []
-        if job.get("game_id"):
+        if job["work"]["type"] == "puzzle":
+            builder.append("Puzzle - ")
+            builder.append(job["work"]["id"])
+        elif job.get("game_id"):
             builder.append(util.base_url(get_endpoint(self.conf)))
             builder.append(job["game_id"])
         else:
@@ -289,7 +295,7 @@ class Worker(threading.Thread):
         lvlIndex = lvl - 1
         variant = job.get("variant", "standard")
         useFairy = job["work"].get("flavor", "yaneuraou") == "fairy"
-        moves = job["moves"].split(" ")
+        moves = job["moves"].split()
 
         log.debug("Playing %s with lvl %d",
                   self.job_name(job), lvl)
@@ -311,7 +317,6 @@ class Worker(threading.Thread):
 
         movetime = int(
             round(consts.LVL_MOVETIMES[lvlIndex] / (self.threads * 0.9 ** (self.threads - 1))))
-        print(lvl, consts.LVL_NODES[lvlIndex], "Skill:", max(consts.LVL_SKILL[lvlIndex], 0))
         start = time.time()
         engine.go(job["position"], moves,
                   movetime=movetime, clock=job["work"].get(
@@ -335,7 +340,7 @@ class Worker(threading.Thread):
     def analysis(self, job: typing.Any) -> typing.Any:
         variant = job.get("variant", "standard")
         useFairy = job["work"].get("flavor", "yaneuraou") == "fairy"
-        moves = job["moves"].split(" ")
+        moves = job["moves"].split()
 
         result = self.make_request()
         start = last_progress_report = time.time()
@@ -387,13 +392,13 @@ class Worker(threading.Thread):
                     self.job_name(job, ply))
 
             engine.go(job["position"], moves[0:ply],
-                      nodes=nodes, movetime=8000)
+                      nodes=nodes, movetime=7000)
             scores, nodes, times, pvs = engine.recv_analysis()
             if multipv is None:
                 depth = len(scores[0]) - 1
                 result["analysis"][ply] = {
                     "depth": depth,
-                    "score": engine.decode_score(scores[0][depth]),
+                    "score": util.decode_score(scores[0][depth]),
                 }
                 try:
                     result["analysis"][ply]["nodes"] = n = nodes[0][depth]
@@ -430,6 +435,72 @@ class Worker(threading.Thread):
 
         return result
 
+    def puzzle(self, job: typing.Any) -> typing.Any:
+        useFairy = job["work"].get("flavor", "yaneuraou") == "fairy"
+        moves = job["moves"].split()
+        movesLen = len(moves)
+        position = job["position"]
+        turn = position.split(" ")[1] != "w" # True for sente
+        winnerTurn = turn if movesLen % 2 == 0 else not turn
+
+        result = self.make_request()
+        start = last_progress_report = time.time()
+
+        if useFairy:
+            engine = self.fairy
+        else:
+            engine = self.yaneuraou
+
+        assert engine is not None
+        engine.set_variant_options("standard")
+        if useFairy:
+            engine.setoption("Skill_Level", '20')
+        else:
+            engine.setoption("SkillLevel", '20')
+        engine.setoption("MultiPV", '3')
+        if (useFairy):
+            engine.setoption("USI_AnalyseMode", 'true')
+        engine.send("usinewgame")
+        engine.isready()
+
+        num_positions = 0
+
+        turn = winnerTurn
+
+        start = time.time()
+        while True:
+            num_positions += 1
+            engine.go(position, moves, depth=18, movetime='3000')
+            bestmove, scores = engine.recv_puzzle_analysis()
+            if bestmove is None or bestmove == "win" or (turn == winnerTurn and is_ambiguous(scores)):
+                break
+            else:
+                moves.append(bestmove)
+            turn = not turn
+
+        end = time.time()
+
+        found = len(moves) > movesLen
+
+        if found:
+            log.info("%s found after %0.1fs (%0.2fs per position - %s)",
+                    self.job_name(job),
+                    end - start, (end - start) / num_positions, engine.name)
+        else:
+            log.log(consts.PROGRESS, "Engine(%s) is looking for new puzzles (%s) - %0.1fs",
+                engine.name, self.job_name(job), end - start)
+
+        result["result"] = found
+        return result
+
+def is_ambiguous(scores: typing.List[int]) -> bool:
+    if len(scores) <= 1:
+        return False
+    best_score = scores[0]
+    second_score = scores[1]
+    if util.win_chances(best_score) < util.win_chances(second_score) + 0.33:
+        return True
+    return False
 
 def start_backoff(conf: configparser.ConfigParser) -> typing.Generator[float, None, None]:
     if util.parse_bool(conf_get(conf, "FixedBackoff")):

@@ -4,6 +4,7 @@ import typing
 import os
 import sys
 import signal
+import util
 from consts import ENGINE
 from logger import log
 
@@ -142,23 +143,6 @@ class Engine:
                 log.warning(
                     "Unexpected engine response to go: %s %s", command, arg)
 
-    def encode_score(self, kind: str, value: int) -> int:
-        if kind == "mate":
-            if value > 0:
-                return 102_000 - value
-            else:
-                return -102_000 - value
-        else:
-            return min(max(value, -100_000), 100_000)
-
-    def decode_score(self, score: int) -> typing.Any:
-        if score > 100_000:
-            return {"mate": 102_000 - score}
-        elif score < -100_000:
-            return {"mate": -102_000 - score}
-        else:
-            return {"cp": score}
-
     def recv_analysis(self) -> typing.Any:
         scores: typing.List[str] = []
         nodes: typing.List[str] = []
@@ -197,7 +181,7 @@ class Engine:
                         set_table(times, int(tokens.pop(0)))
                     elif parameter == "score":
                         kind = tokens.pop(0)
-                        value = self.encode_score(kind, int(tokens.pop(0)))
+                        value = util.encode_score(kind, int(tokens.pop(0)))
                         is_bound = False
                         if tokens and tokens[0] in ["lowerbound", "upperbound"]:
                             is_bound = True
@@ -212,6 +196,34 @@ class Engine:
                     elif parameter == "pv":
                         set_table(pvs, " ".join(tokens))
                         break
+            else:
+                log.warning(
+                    "Unexpected engine response to go: %s %s", command, arg)
+
+    def recv_puzzle_analysis(self) -> typing.Any:
+        scores = [None for i in range(0, 3)]
+        while True:
+            command, arg = self.recv_usi()
+
+            if command == "bestmove":
+                bestmove = arg.split()[0]
+                if bestmove and bestmove != "(none)" and bestmove != "resign":
+                    return bestmove, [score for score in scores if score is not None]
+                else:
+                    return None, None
+            elif command == "info":
+                multipv = 1
+                score = None
+                tokens = (arg or "").split(" ")
+                while tokens:
+                    token = tokens.pop(0)
+                    if token == "multipv":
+                        multipv = int(tokens.pop(0))
+                    elif token == "score":
+                        kind = tokens.pop(0)
+                        score = util.encode_score(kind, int(tokens.pop(0)))
+                if score is not None and len(scores) >= multipv:
+                    scores[multipv - 1] = score
             else:
                 log.warning(
                     "Unexpected engine response to go: %s %s", command, arg)
