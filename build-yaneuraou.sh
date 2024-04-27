@@ -14,13 +14,12 @@ fi
 echo "- Determining CPU architecture..."
 
 ARCH=SSE42
-COMP=clang++
+COMP=g++
 
 case "$(uname -s)" in
   Darwin)
     if sysctl -a | grep machdep.cpu.leaf7_features | grep -q AVX2 ; then
       ARCH=AVX2
-      COMP=g++
     fi
     ;;
   Linux)
@@ -32,11 +31,13 @@ case "$(uname -s)" in
     ;;
 esac
 
+distFile="YaneuraOu-by-gcc-$ARCH"
+
 echo "- Building YANEURAOU $ARCH ... (patience advised)"
 
 make TARGET_CPU=$ARCH YANEURAOU_EDITION=YANEURAOU_ENGINE_NNUE COMPILER=$COMP > /dev/null
 
 cd ../..
-mv ./YaneuraOu/source/YaneuraOu-by-gcc .
+mv ./YaneuraOu/source/YaneuraOu-by-gcc $distFile
 
 echo "- Done!"
