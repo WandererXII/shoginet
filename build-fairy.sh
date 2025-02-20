@@ -31,7 +31,7 @@ if [ -f /proc/cpuinfo ]; then
 fi
 
 echo "- Building $EXE ... (patience advised)"
-make build ARCH=$ARCH EXE=../../$EXE largeboards=yes > /dev/null
+make -j$(nproc || echo 4) build ARCH=$ARCH EXE=../../$EXE largeboards=yes > /dev/null
 
 cd ../..
 echo "- Done!"
