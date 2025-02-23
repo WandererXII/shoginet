@@ -35,7 +35,7 @@ distFile="YaneuraOu-by-gcc-$ARCH"
 
 echo "- Building YANEURAOU $ARCH ... (patience advised)"
 
-make TARGET_CPU=$ARCH YANEURAOU_EDITION=YANEURAOU_ENGINE_NNUE COMPILER=$COMP > /dev/null
+make -j$(nproc || echo 4) TARGET_CPU=$ARCH YANEURAOU_EDITION=YANEURAOU_ENGINE_NNUE COMPILER=$COMP > /dev/null
 
 cd ../..
 mv ./YaneuraOu/source/YaneuraOu-by-gcc $distFile
