@@ -157,8 +157,7 @@ def cmd_cpuid(argv: typing.Any) -> int:
     return 0
 
 
-def main(argv: typing.Any) -> int:
-    # Parse command line arguments
+def parse_command_line(commands, argv):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--verbose", "-v", default=0,
                         action="count", help="increase verbosity")
@@ -198,17 +197,21 @@ def main(argv: typing.Any) -> int:
     g.add_argument("--setoptionFairy", nargs=2, action="append", default=[],
                    metavar=("NAME", "VALUE"), help="set a custom usi option for Fairy Stockfish")
 
+    parser.add_argument("command", default="run",
+                        nargs="?", choices=commands.keys())
+
+    return parser.parse_args(argv[1:])
+
+
+def main(argv: typing.Any) -> int:
+    # Parse command line arguments
     commands = collections.OrderedDict([
         ("run", cmd_run),
         ("configure", cmd_configure),
         ("systemd", cmd_systemd),
         ("cpuid", cmd_cpuid),
     ])
-
-    parser.add_argument("command", default="run",
-                        nargs="?", choices=commands.keys())
-
-    args = parser.parse_args(argv[1:])
+    args = parse_command_line(commands, argv)
 
     # Show intro
     if args.command not in ["systemd"]:
