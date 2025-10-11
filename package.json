@@ -31,8 +31,10 @@
     "typescript": "^5.9.2"
   },
   "scripts": {
+    "preinstall": "$npm_execpath run copy-config",
     "start": "tsx ./src/main.ts",
     "systemd": "tsx ./src/systemd.ts",
+    "copy-config": "node ./scripts/copy-config.js",
     "test": "NODE_ENV=test tsx ./test/main.ts",
     "build-engines": "$npm_execpath run yaneuraou && $npm_execpath run fairy",
     "build-yaneuraou": "./scripts/yaneuraou.sh",
