@@ -1,4 +1,4 @@
-import fs from "fs";
+import fs from "node:fs";
 
 const src = "config/default.json";
 const dest = "config/local.json";
