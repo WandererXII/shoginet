@@ -11,6 +11,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
+ExecStartPre=/usr/bin/npm run test
 ExecStart=/usr/bin/npm run start
 WorkingDirectory=${cwd}
 ReadWriteDirectories=${cwd}

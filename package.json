@@ -33,7 +33,6 @@
   "scripts": {
     "preinstall": "$npm_execpath run copy-config",
     "start": "tsx ./src/main.ts",
-    "systemd": "tsx ./src/systemd.ts",
     "copy-config": "node ./scripts/copy-config.js",
     "test": "NODE_ENV=test tsx ./test/main.ts",
     "build-engines": "$npm_execpath run build-yaneuraou && $npm_execpath run build-fairy",

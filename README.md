@@ -42,7 +42,7 @@ npm run start
 You will probably want to run Shoginet with a process manager. For systemd (Linux) integration:
 
 ```console
-npm run systemd > /etc/systemd/system/shoginet.service
+node ./scripts/systemd.js > /etc/systemd/system/shoginet.service
 sudo systemctl daemon-reload
 sudo systemctl start shoginet
 ```
