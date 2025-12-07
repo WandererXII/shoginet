@@ -36,7 +36,7 @@
     "systemd": "tsx ./src/systemd.ts",
     "copy-config": "node ./scripts/copy-config.js",
     "test": "NODE_ENV=test tsx ./test/main.ts",
-    "build-engines": "$npm_execpath run yaneuraou && $npm_execpath run fairy",
+    "build-engines": "$npm_execpath run build-yaneuraou && $npm_execpath run build-fairy",
     "build-yaneuraou": "./scripts/yaneuraou.sh",
     "build-fairy": "./scripts/fairy.sh",
     "format": "biome format",
