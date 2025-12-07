@@ -22,6 +22,7 @@
     // "noFallthroughCasesInSwitch": true,
     // "noPropertyAccessFromIndexSignature": true,
 
+    "resolveJsonModule": true,
     "esModuleInterop": true,
     "composite": true,
     "isolatedDeclarations": true,
