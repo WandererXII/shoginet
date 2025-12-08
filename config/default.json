@@ -13,6 +13,6 @@
     }
   },
   "logger":  "info",
-  "endpoint": "http://localhost:9663",
+  "endpoint": "https://lishogi.org",
   "key": ""
 }
