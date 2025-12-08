@@ -1,18 +1,25 @@
 import { execSync } from 'node:child_process';
 import process from 'node:process';
+import path from 'node:path'; 
 
 function systemdConfig() {
   const cwd = process.cwd();
   const user = execSync('whoami').toString().trim();
   const group = execSync('id -gn').toString().trim();
 
+  const npmPath = execSync('which npm').toString().trim();
+  const nodeBinDir = path.dirname(process.execPath);
+  const envPath = `PATH=${nodeBinDir}:/usr/bin:/bin`;
+
   const output = `[Unit]
 After=network-online.target
 Wants=network-online.target
 
 [Service]
-ExecStartPre=/usr/bin/npm run test
-ExecStart=/usr/bin/npm run start
+Environment="${envPath}"
+ExecStartPre=${npmPath} run test
+ExecStart=${npmPath} run start
+
 WorkingDirectory=${cwd}
 ReadWriteDirectories=${cwd}
 User=${user}
@@ -24,7 +31,7 @@ PrivateDevices=true
 DevicePolicy=closed
 ProtectSystem=strict
 NoNewPrivileges=true
-Restart=always
+Restart=on-failure
 RestartSec=5
 TimeoutStopSec=300
 KillSignal=SIGINT
