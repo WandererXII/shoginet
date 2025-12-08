@@ -8,15 +8,6 @@ export interface EngineInfo {
   [key: string]: any;
 }
 
-export interface Config {
-  endpoint: string;
-  key?: string;
-  yaneuraouPath: string;
-  fairyPath: string;
-  memory?: number;
-  cores?: number;
-}
-
 export interface ScoreResult {
   mate?: number;
   cp?: number;

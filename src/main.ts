@@ -47,9 +47,11 @@ async function main(): Promise<void> {
       baseLogger.info('Shutting down...');
       nextForceShutdown = true;
       await workerManager.stop();
+      baseLogger.info('Workers stopped');
     } else {
       baseLogger.info('Forcing shutdown...');
       await workerManager.forceStop();
+      baseLogger.info('Workers stopped by force');
     }
 
     process.exit(0);
