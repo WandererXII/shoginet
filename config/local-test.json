@@ -1,4 +1,4 @@
 {
   "endpoint": "http://localhost:1080",
-  "logger":  "debug"
+  "logger":  "info"
 }
