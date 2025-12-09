@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import config from 'config';
 import { StatusCodes } from 'http-status-codes';
@@ -6,20 +6,30 @@ import serverConfig from './server-config.json' with { type: 'json' };
 import { type WorkDefinition, works } from './works.js';
 
 function main() {
+  let shoginetProcess: ChildProcessWithoutNullStreams;
+  let exitCode: number = 1;
+
   const worksInProgress = new Map<string, WorkDefinition>();
 
   const server = http.createServer(
     async (req: IncomingMessage, res: ServerResponse) => {
-      const getNextWorkOrFinish = () => {
+      const getNextWork = () => {
         const next = works.shift();
         if (!next) {
-          console.log('All tests finished');
-          process.exit(0);
+          console.log('All tests finished successfully!');
+          startShutdown(0);
+          res.writeHead(StatusCodes.NO_CONTENT, {
+            'Content-Type': 'application/json',
+          });
+          return res.end();
+        } else {
+          console.log(`Started work: ${next.name}`);
+          worksInProgress.set(next.path, next);
+          res.writeHead(StatusCodes.ACCEPTED, {
+            'Content-Type': 'application/json',
+          });
+          return res.end(JSON.stringify(next.work));
         }
-
-        console.log(`Started work: ${next.name}`);
-        worksInProgress.set(next.path, next);
-        return next;
       };
 
       switch (req.url) {
@@ -28,18 +38,15 @@ function main() {
           return res.end(JSON.stringify(serverConfig));
         }
         case '/shoginet/acquire': {
-          const next = getNextWorkOrFinish();
-
-          res.writeHead(StatusCodes.ACCEPTED, {
-            'Content-Type': 'application/json',
-          });
-          return res.end(JSON.stringify(next.work));
+          return getNextWork();
         }
         default: {
           const curWork = req.url && worksInProgress.get(req.url);
           if (!curWork) {
             console.error(`✖ No work in progress`);
-            process.exit(1);
+            startShutdown(1);
+            res.writeHead(StatusCodes.INTERNAL_SERVER_ERROR);
+            return res.end();
           }
           try {
             const chunks: Buffer[] = [];
@@ -54,11 +61,7 @@ function main() {
               if (validated) console.log(`✔ ${curWork.name} passed validation`);
               else console.error(`✖ ${curWork.name} failed`);
 
-              const next = getNextWorkOrFinish();
-              res.writeHead(StatusCodes.ACCEPTED, {
-                'Content-Type': 'application/json',
-              });
-              return res.end(JSON.stringify(next.work));
+              return getNextWork();
             } else {
               res.writeHead(StatusCodes.NO_CONTENT, {
                 'Content-Type': 'application/json',
@@ -79,7 +82,7 @@ function main() {
     console.log(`Mock server running at ${url.href}`);
   });
 
-  const shoginetProcess = spawn('tsx', ['src/main.ts'], {
+  shoginetProcess = spawn('tsx', ['src/main.ts'], {
     env: {
       ...process.env,
     },
@@ -88,9 +91,17 @@ function main() {
   shoginetProcess.stdout?.on('data', (chunk) => process.stdout.write(chunk));
   shoginetProcess.stderr?.on('data', (chunk) => process.stderr.write(chunk));
 
-  shoginetProcess.on('exit', (code) => {
-    process.exit(code ?? 1);
+  shoginetProcess.on('exit', () => {
+    server.close(() => {
+      console.log(`Exiting with code: ${exitCode}`);
+      process.exit(exitCode);
+    });
   });
+
+  function startShutdown(code: number) {
+    exitCode = code;
+    shoginetProcess.kill('SIGTERM');
+  }
 }
 
 main();
