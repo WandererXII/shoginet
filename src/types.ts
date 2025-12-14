@@ -19,7 +19,7 @@ interface BaseWork {
   work: {
     type: WorkType;
     id: string;
-    flavor: EngineKind;
+    engine: EngineKind;
   };
   game_id: string;
   position: string;
@@ -32,7 +32,7 @@ export interface MoveWork extends BaseWork {
   work: {
     type: 'move';
     id: string;
-    flavor: EngineKind;
+    engine: EngineKind;
     level: Level;
     clock?: {
       wtime: number;
@@ -47,7 +47,7 @@ export interface AnalysisWork extends BaseWork {
   work: {
     type: 'analysis';
     id: string;
-    flavor: EngineKind;
+    engine: EngineKind;
   };
   nodes: number;
   skipPositions: number[];
@@ -57,7 +57,7 @@ export interface PuzzleWork extends BaseWork {
   work: {
     type: 'puzzle';
     id: string;
-    flavor: EngineKind;
+    engine: EngineKind;
   };
 }
 

@@ -126,7 +126,7 @@ export class Worker extends EventEmitter {
 
   task(work: Work): void {
     const workType = work.work.type;
-    const engine = this.engines[work.work.flavor];
+    const engine = this.engines[work.work.engine];
 
     if (!engine || !engine.isActive) {
       this.logger.error('Engine not found');
