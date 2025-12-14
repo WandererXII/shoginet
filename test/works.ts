@@ -14,6 +14,69 @@ function validateBestmove(response: any): boolean {
   return !!parsed;
 }
 
+interface PuzzleValidationSpec {
+  result: boolean;
+  themes: string[];
+  sfen: string;
+  line: string[];
+}
+
+function validatePuzzle(
+  response: PuzzleValidationSpec,
+  expected: PuzzleValidationSpec,
+): boolean {
+  if (response.result !== expected.result) {
+    console.error('Mismatch: result', {
+      response: response.result,
+      expected: expected.result,
+    });
+    return false;
+  }
+
+  if (!Array.isArray(response.themes)) {
+    console.error('Invalid: themes is not an array', {
+      response: response.themes,
+    });
+    return false;
+  }
+
+  if (response.themes.length !== expected.themes.length) {
+    console.error('Mismatch: themes length', {
+      response: response.themes.length,
+      expected: expected.themes.length,
+    });
+    return false;
+  }
+
+  if (
+    !(response.themes as string[]).every((t) => expected.themes.includes(t))
+  ) {
+    console.error('Mismatch: themes content', {
+      response: response.themes,
+      expected: expected.themes,
+    });
+    return false;
+  }
+
+  if (response.sfen !== expected.sfen) {
+    console.error('Mismatch: sfen', {
+      response: response.sfen,
+      expected: expected.sfen,
+    });
+    return false;
+  }
+
+  if (JSON.stringify(response.line) !== JSON.stringify(expected.line)) {
+    console.error('Mismatch: line', {
+      response: response.line,
+      expected: expected.line,
+    });
+    return false;
+  }
+
+  return true;
+}
+
 export const works: WorkDefinition[] = [
   {
     name: 'Move (yaneuraou)',
@@ -24,7 +87,7 @@ export const works: WorkDefinition[] = [
         id: 'A',
         level: 5,
         clock: { btime: 120000, wtime: 120000, inc: 0, byo: 0 },
-        flavor: 'yaneuraou',
+        engine: 'yaneuraou',
       },
       game_id: 'xxxxxxxx',
       position:
@@ -43,7 +106,7 @@ export const works: WorkDefinition[] = [
         id: 'B',
         level: 1,
         clock: { btime: 120000, wtime: 120000, inc: 0, byo: 0 },
-        flavor: 'fairy',
+        engine: 'fairy',
       },
       game_id: 'xxxxxxxx',
       position:
@@ -60,7 +123,7 @@ export const works: WorkDefinition[] = [
       work: {
         type: 'analysis',
         id: 'C',
-        flavor: 'yaneuraou',
+        engine: 'yaneuraou',
       },
       nodes: 1250000,
       skipPositions: [0, 1, 2],
@@ -79,13 +142,13 @@ export const works: WorkDefinition[] = [
     },
   },
   {
-    name: 'Puzzle',
-    path: '/shoginet/puzzle/D',
+    name: 'Puzzle - game (b)',
+    path: '/shoginet/puzzle/1',
     work: {
       work: {
         type: 'puzzle',
-        id: 'D',
-        flavor: 'yaneuraou',
+        id: '1',
+        engine: 'yaneuraou',
       },
       game_id: 'synthetic',
       position:
@@ -94,7 +157,60 @@ export const works: WorkDefinition[] = [
       moves: '3i3h',
     },
     validate: (response: any) => {
-      return response.result === true;
+      const valid = validatePuzzle(response, {
+        result: true,
+        themes: ['mate', 'mateIn1', 'oneMove', 'tsume'],
+        sfen: 'lnsgk4/1r3s3/1ppp3pp/p8/5+B3/2P1n4/PP3+bPPP/8R/L1SGKGS1L b GNL2Pn4p 27',
+        line: ['3i3h', 'N*6g'],
+      });
+      if (!valid) console.error(response);
+      return valid;
+    },
+  },
+  {
+    name: 'Puzzle - futile interposition (b)',
+    path: '/shoginet/puzzle/2',
+    work: {
+      work: {
+        type: 'puzzle',
+        id: '2',
+        engine: 'yaneuraou',
+      },
+      game_id: 'synthetic',
+      position: '9/1kg6/1psg5/2ppp4/9/2P6/1P3+p+p+p+p/9/L6K1 b BSgsnlp 1',
+      variant: 'standard',
+      moves: '',
+    },
+    validate: (response: any) => {
+      return validatePuzzle(response, {
+        result: true,
+        themes: ['mate', 'mateIn5', 'tsume', 'long'],
+        sfen: '9/1kg6/1psg5/2ppp4/9/2P6/1P3+p+p+p+p/9/L6K1 b BSgsnlp 1',
+        line: ['B*9c', '8b8a', 'S*9b', '8a9b', '9c7a+'],
+      });
+    },
+  },
+  {
+    name: 'Puzzle - futile interposition (w)',
+    path: '/shoginet/puzzle/3',
+    work: {
+      work: {
+        type: 'puzzle',
+        id: '3',
+        engine: 'fairy',
+      },
+      game_id: 'synthetic',
+      position: '9/9/9/9/pPP6/1K7/PS1s5/3+r5/1R2b4 w B2G2S2N2L4P 1',
+      variant: 'standard',
+      moves: '',
+    },
+    validate: (response: any) => {
+      return validatePuzzle(response, {
+        result: true,
+        themes: ['mate', 'mateIn1', 'tsume', 'oneMove'],
+        sfen: '9/9/9/9/pPP6/1K7/PS1s5/3+r5/1R2b4 w B2G2S2N2L4P 1',
+        line: ['6h7i'],
+      });
     },
   },
 ];
