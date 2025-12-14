@@ -42,6 +42,7 @@ function joinPath(path: string) {
   return new URL(`shoginet/${path}`, clientConfig.endpoint).toString();
 }
 
+let lastLog: number;
 export async function acquireWork(): Promise<Work | undefined> {
   try {
     const url = joinPath('acquire');
@@ -53,8 +54,11 @@ export async function acquireWork(): Promise<Work | undefined> {
     });
     const work = processResponse(response);
     return work;
-  } catch (err) {
-    baseLogger.error('Failed to acquire work:', err);
+  } catch (_) {
+    if (!lastLog || Date.now() - lastLog > 60 * 1000 * 5) {
+      baseLogger.error('Failed to acquire work.');
+      lastLog = Date.now();
+    }
     return undefined;
   }
 }
@@ -71,8 +75,8 @@ export async function submitWork(
       json: og(res),
     });
     return processResponse(response);
-  } catch (err) {
-    baseLogger.error('Failed to submit work:', err);
+  } catch (_) {
+    baseLogger.error('Failed to submit work:', work);
     return undefined;
   }
 }
@@ -83,8 +87,8 @@ export async function abortWork(work: Work): Promise<void> {
       timeout: { request: HTTP_TIMEOUT_UNIMPORTANT_SECONDS * 1000 },
       headers,
     });
-  } catch (err) {
-    baseLogger.error(`Failed to abort work: ${err}`);
+  } catch (_) {
+    baseLogger.error(`Failed to abort work: ${work}`);
   }
 }
 
@@ -98,8 +102,8 @@ export async function analysisProgressReport(
       headers,
       json: og({ ...res, partial: true }),
     });
-  } catch (err) {
-    baseLogger.warn(`Failed to submit analysis progress: ${err}`);
+  } catch (_) {
+    baseLogger.warn(`Failed to submit analysis progress.`);
   }
 }
 
