@@ -76,27 +76,59 @@ export class WorkerManager {
     this.abort.abort();
 
     const busyWorkers = this.workers.filter((w) => !!w.currentWork);
-    if (busyWorkers.length) {
-      await new Promise<void>((resolve) => {
-        this.logger.info(
-          'Waiting for workers to finish, send signal again to force exit.',
-        );
-        let done = 0;
-        const onDone = () => {
-          done++;
-          if (done >= busyWorkers.length) resolve();
+
+    if (busyWorkers.length === 0) {
+      this.forceStop();
+      return;
+    }
+
+    this.logger.info(
+      `Waiting for ${busyWorkers.length} workers to finish or 10m timeout...`,
+    );
+
+    const waitForWorkersToFinish = new Promise<void>((resolve) => {
+      const finishedWorkerIds = new Set<number>();
+
+      const checkDone = () => {
+        if (finishedWorkerIds.size >= busyWorkers.length) {
+          resolve();
+        }
+      };
+
+      busyWorkers.forEach((w) => {
+        const onWorkerFinished = () => {
+          if (!finishedWorkerIds.has(w.index)) {
+            finishedWorkerIds.add(w.index);
+
+            w.off('result', onWorkerFinished);
+            w.off('failure', onWorkerFinished);
+            w.off('available', onWorkerFinished);
+
+            checkDone();
+          }
         };
 
-        busyWorkers.forEach((w) => {
-          w.once('result', onDone);
-          w.once('failure', onDone);
-          w.once('available', onDone);
-        });
+        w.once('result', onWorkerFinished);
+        w.once('failure', onWorkerFinished);
+        w.once('available', onWorkerFinished);
       });
-      this.workers.forEach((w) => {
-        w.stop();
-      });
-    } else this.forceStop();
+    });
+
+    const maxWaitTime = new Promise<void>((resolve) => {
+      setTimeout(
+        () => {
+          this.logger.warn('Force stop triggered due to 10 minute timeout.');
+          resolve();
+        },
+        10 * 60 * 1000,
+      );
+    });
+
+    await Promise.race([waitForWorkersToFinish, maxWaitTime]);
+
+    this.workers.forEach((w) => {
+      w.stop();
+    });
   }
 
   async forceStop(): Promise<void> {

@@ -33,7 +33,7 @@ ProtectSystem=strict
 NoNewPrivileges=true
 Restart=on-failure
 RestartSec=5
-TimeoutStopSec=300
+TimeoutStopSec=610
 KillSignal=SIGINT
 KillMode=control-group
 
