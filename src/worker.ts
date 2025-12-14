@@ -83,6 +83,7 @@ export class Worker extends EventEmitter {
       if (this.currentWork) {
         this.logger.error('Aborting work due to failue', this.currentWork);
         abortWork(this.currentWork);
+        this.release();
       }
       this.initialize();
     };
