@@ -14,16 +14,13 @@ const headers = {
   'shoginet-key': clientConfig.key,
 };
 
-function og(res: Record<string, any>) {
+function makeJson(res: Record<string, any>) {
   return {
     ...res,
     shoginet: {
       version: pkg.version,
-      python: 'NO',
       apikey: clientConfig.key,
     },
-    yaneuraou: { name: 'Y', options: {} },
-    fairy: { name: 'F', options: {} },
   };
 }
 
@@ -50,7 +47,7 @@ export async function acquireWork(): Promise<Work | undefined> {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
       headers,
       throwHttpErrors: false,
-      json: og({}),
+      json: makeJson({}),
     });
     const work = processResponse(response);
     return work;
@@ -72,7 +69,7 @@ export async function submitWork(
     const response = await got.post(url, {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
       headers,
-      json: og(res),
+      json: makeJson(res),
     });
     return processResponse(response);
   } catch (_) {
@@ -100,7 +97,7 @@ export async function analysisProgressReport(
     await got.post(joinPath(`${work.work.type}/${work.work.id}`), {
       timeout: { request: HTTP_TIMEOUT_UNIMPORTANT_SECONDS * 1000 },
       headers,
-      json: og({ ...res, partial: true }),
+      json: makeJson({ ...res, partial: true }),
     });
   } catch (_) {
     baseLogger.warn(`Failed to submit analysis progress.`);
