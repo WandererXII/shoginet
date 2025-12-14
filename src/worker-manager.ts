@@ -90,6 +90,7 @@ export class WorkerManager {
         busyWorkers.forEach((w) => {
           w.once('result', onDone);
           w.once('failure', onDone);
+          w.once('available', onDone);
         });
       });
       this.workers.forEach((w) => {
