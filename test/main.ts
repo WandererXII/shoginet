@@ -7,21 +7,29 @@ import { type WorkDefinition, works } from './works.js';
 
 function main() {
   let shoginetProcess: ChildProcessWithoutNullStreams;
-  let exitCode: number = 1;
+  let exitCode: number = 0;
+  let running = true;
 
   const worksInProgress = new Map<string, WorkDefinition>();
 
   const server = http.createServer(
     async (req: IncomingMessage, res: ServerResponse) => {
+      const noWork = () => {
+        res.writeHead(StatusCodes.NO_CONTENT, {
+          'Content-Type': 'application/json',
+        });
+        return res.end();
+      };
+
       const getNextWork = () => {
+        if (!running) return noWork();
+
         const next = works.shift();
         if (!next) {
-          console.log('All tests finished successfully!');
-          startShutdown(0);
-          res.writeHead(StatusCodes.NO_CONTENT, {
-            'Content-Type': 'application/json',
-          });
-          return res.end();
+          console.log('All tests finished');
+          running = false;
+          startShutdown();
+          return noWork();
         } else {
           console.log(`Started work: ${next.name}`);
           worksInProgress.set(next.path, next);
@@ -44,7 +52,8 @@ function main() {
           const curWork = req.url && worksInProgress.get(req.url);
           if (!curWork) {
             console.error(`✖ No work in progress`);
-            startShutdown(1);
+            exitCode += 1;
+            startShutdown();
             res.writeHead(StatusCodes.INTERNAL_SERVER_ERROR);
             return res.end();
           }
@@ -59,14 +68,14 @@ function main() {
             // allow undefined for progress reports
             if (validated !== undefined) {
               if (validated) console.log(`✔ ${curWork.name} passed validation`);
-              else console.error(`✖ ${curWork.name} failed`);
+              else {
+                console.error(`✖ ${curWork.name} failed`);
+                exitCode += 1;
+              }
 
               return getNextWork();
             } else {
-              res.writeHead(StatusCodes.NO_CONTENT, {
-                'Content-Type': 'application/json',
-              });
-              return res.end();
+              return noWork();
             }
           } catch (e) {
             res.writeHead(StatusCodes.INTERNAL_SERVER_ERROR);
@@ -98,8 +107,7 @@ function main() {
     });
   });
 
-  function startShutdown(code: number) {
-    exitCode = code;
+  function startShutdown() {
     shoginetProcess.kill('SIGTERM');
   }
 }
