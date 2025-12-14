@@ -203,8 +203,6 @@ function clearFutileInterposition(usis: string[]): string[] {
     const atkMove = parseUsi(attackerUsi);
 
     if (!defMove || !atkMove) return false;
-    console.log(isDrop(defMove), atkMove.to, defMove.to);
-
     return isDrop(defMove) && atkMove.to === defMove.to;
   }
 
@@ -215,8 +213,6 @@ function clearFutileInterposition(usis: string[]): string[] {
   for (let i = startIndex; i >= 1; i -= 2) {
     const defenderUsi = usis[i];
     const attackerUsi = usis[i + 1];
-
-    console.log('checking', defenderUsi, attackerUsi);
 
     if (isFutilePair(defenderUsi, attackerUsi)) {
       cutoffIndex = i;
