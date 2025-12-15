@@ -1,5 +1,7 @@
 # Shoginet
 
+[![lishogi.org](https://img.shields.io/badge/☗_lishogi.org-Play_shogi-black)](https://lishogi.org)
+
 **Distributed network for [Lishogi.org](https://lishogi.org)**
 
 ## Installation
