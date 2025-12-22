@@ -1,11 +1,11 @@
 {
   "analysis": {
-    "movetime": 1500,
-    "nodes": 0,
-    "depth": 18
+    "movetime": 1000,
+    "nodes": 1250000,
+    "depth": 20
   },
   "puzzle": {
-    "movetime": 2000,
+    "movetime": 3000,
     "depth": 18,
     "maxLength": 12
   },
@@ -63,6 +63,22 @@
       }
     },
     "yaneuraou": {
+      "1": {
+        "movetime": 30,
+        "depth": 1
+      },
+      "2": {
+        "movetime": 100,
+        "depth": 1
+      },
+      "3": {
+        "movetime": 150,
+        "depth": 1
+      },
+      "4": {
+        "movetime": 50,
+        "depth": 2
+      },
       "5": {
         "movetime": 300,
         "depth": 2

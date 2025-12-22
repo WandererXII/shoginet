@@ -17,12 +17,7 @@ async function main(): Promise<void> {
 
   const serverConfig = new ServerConfig();
   baseLogger.info('Fetching server config...');
-  try {
-    await serverConfig.initialize();
-  } catch (err) {
-    baseLogger.error(`Failed to fetch server config file: ${err}`);
-    process.exit(1);
-  }
+  await serverConfig.initialize();
 
   baseLogger.info('Verifying shoginet version...');
   try {

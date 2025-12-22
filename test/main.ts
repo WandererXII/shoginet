@@ -2,7 +2,6 @@ import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import http, { type IncomingMessage, type ServerResponse } from 'node:http';
 import config from 'config';
 import { StatusCodes } from 'http-status-codes';
-import serverConfig from './server-config.json' with { type: 'json' };
 import { type WorkDefinition, works } from './works.js';
 
 function main() {
@@ -42,8 +41,11 @@ function main() {
 
       switch (req.url) {
         case '/shoginet/config': {
-          res.writeHead(StatusCodes.OK, { 'Content-Type': 'application/json' });
-          return res.end(JSON.stringify(serverConfig));
+          // make sure shoginet can start on server downtime
+          res.writeHead(StatusCodes.INTERNAL_SERVER_ERROR, {
+            'Content-Type': 'application/json',
+          });
+          return res.end();
         }
         case '/shoginet/acquire': {
           return getNextWork();

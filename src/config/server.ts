@@ -1,3 +1,4 @@
+import serverConfig from '../../server-config.json' with { type: 'json' };
 import { SERVER_CONFIG_REFETCH_SECONDS } from '../consts.js';
 import { getServerConfig } from '../http.js';
 import { baseLogger } from '../logger.js';
@@ -36,7 +37,14 @@ export class ServerConfig {
   });
 
   async initialize(): Promise<void> {
-    await this.load();
+    try {
+      await this.load();
+    } catch {
+      this.config = serverConfig;
+      this.logger.error(
+        'Failed to fetch server config file, using local config',
+      );
+    }
     this.startPeriodicRefresh();
   }
 
