@@ -88,7 +88,7 @@ export function puzzle(worker: Worker, engine: Engine, work: PuzzleWork): void {
         const trimmedResultUsis =
           resultUsis.length % 2 ? resultUsis : resultUsis.slice(0, -1);
         const filteredResultUsis = clearFutileInterposition(trimmedResultUsis);
-        const doWeHavePuzzle = !!filteredResultUsis;
+        const doWeHavePuzzle = filteredResultUsis.length > 0;
         const result: any = { rejected: !doWeHavePuzzle };
 
         if (doWeHavePuzzle) {
