@@ -1,7 +1,3 @@
-.vscode/
-*.ini
-YaneuraOu/
-Fairy-Stockfish/
-__pycache__/
-/YaneuraOu-by-gcc*
-/fairy-stockfish-largeboard*
+.vscode
+node_modules
+config/local.json

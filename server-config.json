@@ -1,0 +1,108 @@
+{
+  "analysis": {
+    "movetime": 1000,
+    "nodes": 1250000,
+    "depth": 20
+  },
+  "puzzle": {
+    "movetime": 3000,
+    "depth": 18,
+    "maxLength": 12
+  },
+  "move": {
+    "fairy": {
+      "1": {
+        "skill": -9,
+        "movetime": 50,
+        "depth": 5
+      },
+      "2": {
+        "skill": -5,
+        "movetime": 100,
+        "depth": 5
+      },
+      "3": {
+        "skill": -1,
+        "movetime": 150,
+        "depth": 5
+      },
+      "4": {
+        "skill": 3,
+        "movetime": 200,
+        "depth": 5
+      },
+      "5": {
+        "skill": 6,
+        "movetime": 300,
+        "depth": 5
+      },
+      "6": {
+        "skill": 9,
+        "movetime": 400,
+        "depth": 5
+      },
+      "7": {
+        "skill": 12,
+        "movetime": 500,
+        "depth": 8
+      },
+      "8": {
+        "skill": 15,
+        "movetime": 1000,
+        "depth": 13
+      },
+      "9": {
+        "skill": 18,
+        "movetime": 1500,
+        "depth": 17
+      },
+      "10": {
+        "skill": 20,
+        "movetime": 2000,
+        "depth": 22
+      }
+    },
+    "yaneuraou": {
+      "1": {
+        "movetime": 30,
+        "depth": 1
+      },
+      "2": {
+        "movetime": 100,
+        "depth": 1
+      },
+      "3": {
+        "movetime": 150,
+        "depth": 1
+      },
+      "4": {
+        "movetime": 50,
+        "depth": 2
+      },
+      "5": {
+        "movetime": 300,
+        "depth": 2
+      },
+      "6": {
+        "movetime": 400,
+        "depth": 4
+      },
+      "7": {
+        "movetime": 500,
+        "depth": 8
+      },
+      "8": {
+        "movetime": 1000,
+        "depth": 13
+      },
+      "9": {
+        "movetime": 1500,
+        "depth": 17
+      },
+      "10": {
+        "movetime": 2500,
+        "depth": 22
+      }
+    }
+  }
+}

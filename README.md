@@ -1,43 +1,76 @@
-# Shoginet - Distributed Network for [lishogi.org](lishogi.org)
+# Shoginet
 
-Based on [fairyfishnet](https://github.com/gbtami/fairyfishnet).
+[![lishogi.org](https://img.shields.io/badge/☗_lishogi.org-Play_shogi-black)](https://lishogi.org)
 
-## How to setup
+**Distributed network for [Lishogi.org](https://lishogi.org)**
 
-### Linux
+## Installation
 
-You need to have both engines:
-
-- YaneuraOu NNUE
-- Fairy-Stockfish
-
-To achieve this you can use the provided scripts - `build-yaneuraou.sh` for YaneuraOu and `build-fairy.sh` to build Fairy-Stockfish.
-The scripts first clone [YaneuraOu github](https://github.com/yaneurao/YaneuraOu) or [Fairy-Stockfish](https://github.com/fairy-stockfish/Fairy-Stockfish) and then run the `make`.
-
-You can also try downloading YaneuraOu from https://github.com/yaneurao/YaneuraOu/actions using GitHub Actions artifacts.
-
-You can also download Fairy-Stockfish from [https://fairy-stockfish.github.io/download/](https://fairy-stockfish.github.io/download/), make sure to pick 'all-variants'
-
-To test that the engines work on you machine just run the engine `./YaneuraOu-by-gcc`(adjust command if necessary). and then enter the following commands:
-
-```
-usi
-isready
-position sfen lnsgkgsnl/1r5b1/ppppppppp/9/9/9/PPPPPPPPP/1B5R1/LNSGKGSNL b - 1 moves 7g7f
-go
+```console
+git clone https://github.com/WandererXII/shoginet.git
+cd shoginet
+npm install
 ```
 
-If the engine didn't crash and you got some response, it looks like ti works. Yeah! Now test `./fairy-stockfish-largeboard_x86-64` in the same way.
+**Note:** You must obtain and install engines **before** running Shoginet:
 
-If you have YaneuraOu and Fairy-Stockfish ready and python3 installed just run `python3 ./shoginet.py`, it will ask you about what working directory you want to use, path to the engine and similar things, leaving everything default should be fine.
+* **Linux - from source:** Use `./scripts/yaneuraou.sh` and `./scripts/fairy.sh` to download and build engines yourself. Make sure you have a C/C++ compiler and build tools installed. It will take a few minutes per engine.
+* **Ready to use binary:** Make sure to download the correct version for your OS and CPU. 
+  - YaneuraOu - [YaneuraOu repo releases](https://github.com/yaneurao/YaneuraOu/releases)
+  - Fairy Stockfish - [Fairy Stockfish website](https://fairy-stockfish.github.io/download/), download largeboard (all variants) version
 
-Currently no key is required.
-If you want to go over this setup step again, just delete shoginet.ini.
+Do not forget to check if path to engines is correct set (next step)
 
-### Windows
+## Configuration
 
-Windows is not supported right now. Although almost everything should be fine. You will obviously have to compile YaneuraOu for windows and provide the correct path, when shoginet.py asks you the first time.
+Configuration is stored in `config` directory. Write your own overrides to `local.json`.
 
-## How it works
+Most importantly you want to make sure that engine path is correctly set. By default we look into `engines` directory. _Yaneuraou_ engine default name is `YaneuraOu-by-gcc` and _Fairy Stockfish_ default name is `fairy-stockfish`
 
-Every once in a while shoginet running on your computer asks lishogi.org for some work. If someone requested analysis of their game on lishogi.org, you may receive this work. The work is a simple json containing mainly the initial position and sequence of moves. You then run engine analysis on these data and send the results back to lishogi.org.
+## Usage
+
+**Run tests first** to make sure everything works, especially the engines:
+
+```console
+npm run test
+```
+
+If tests pass successfully, you can start Shoginet directly by running:
+
+```console
+npm run start
+```
+
+You will probably want to run Shoginet with a process manager. For systemd (Linux) integration:
+
+```console
+node ./scripts/systemd.js | sudo tee /etc/systemd/system/shoginet.service > /dev/null
+sudo systemctl daemon-reload
+sudo systemctl start shoginet
+```
+
+## Shoginet workflow
+
+1. **Start!**
+   - Shoginet is initiated and fetches config from the server. The config sets parameters for move generation, analysis and puzzle verification.
+
+2. **Request work**
+   - Shoginet -> Lishogi: "Give me work!"
+
+3. **Receive work**
+   - Lishogi -> Shoginet: "Here's a game to analyse"
+   - The work could be _analysis_, _move generation_ or _puzle verification_. Or nothing, if the queue is empty.
+
+4. **Process work**
+   - Shoginet is analyzing the game...
+   - This consumes CPU
+
+5. **Submit Results**
+   - Shoginet -> Lishogi: "Here are the analysis result"
+
+6. **Repeat**
+   - Lishogi -> Shoginet: "Thanks, here's more work :)"
+   - Rinse & repeat
+
+7. **Stop**
+   - Stop Shoginet when you need CPU power. Shoginet will try to finish the work in progress and only then exit, if you wish to abort immediately press CTRL^C again.

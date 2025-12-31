@@ -1,0 +1,45 @@
+{
+  "name": "shoginet",
+  "version": "5.0.0",
+  "description": "Distributed network for lishogi.org",
+  "license": "AGPL-3.0-or-later",
+  "author": "WandererXII",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/WandererXII/shoginet"
+  },
+  "bugs": {
+    "url": "https://github.com/WandererXII/shoginet/issues"
+  },
+  "homepage": "https://lishogi.org",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@biomejs/biome": "2.2.4",
+    "@types/config": "^3.3.5",
+    "@types/node": "^22",
+    "@types/semver": "^7.7.1",
+    "config": "^4.1.1",
+    "got": "^14.4.8",
+    "http-status-codes": "^2.3.0",
+    "semver": "^7.7.2",
+    "shogiops": "^0.19.0",
+    "tslog": "^4.10.2",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.2"
+  },
+  "scripts": {
+    "preinstall": "$npm_execpath run copy-config",
+    "start": "tsx ./src/main.ts",
+    "copy-config": "node ./scripts/copy-config.js",
+    "test": "NODE_ENV=test tsx ./test/main.ts",
+    "build-engines": "$npm_execpath run build-yaneuraou && $npm_execpath run build-fairy",
+    "build-yaneuraou": "./scripts/yaneuraou.sh",
+    "build-fairy": "./scripts/fairy.sh",
+    "check": "biome check",
+    "check:write": "biome check --write",
+    "type-check": "tsc --noEmit"
+  }
+}
