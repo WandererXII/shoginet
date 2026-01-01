@@ -40,7 +40,7 @@ function main() {
       };
 
       switch (req.url) {
-        case '/shoginet/config': {
+        case '/assets/shoginet/config.json': {
           // make sure shoginet can start on server downtime
           res.writeHead(StatusCodes.INTERNAL_SERVER_ERROR, {
             'Content-Type': 'application/json',

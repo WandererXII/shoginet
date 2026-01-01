@@ -35,6 +35,10 @@ function processResponse(res: Response<string>): Work | undefined {
   throw new Error(`Unexpected status ${res.statusCode}: ${res}`);
 }
 
+function joinPathNoPrefix(path: string) {
+  return new URL(path, clientConfig.endpoint).toString();
+}
+
 function joinPath(path: string) {
   return new URL(`shoginet/${path}`, clientConfig.endpoint).toString();
 }
@@ -106,7 +110,7 @@ export async function analysisProgressReport(
 
 export function getServerConfig(): Promise<any> {
   return got
-    .get(joinPath('config'), {
+    .get(joinPathNoPrefix('assets/shoginet/config.json'), {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
       headers,
     })
