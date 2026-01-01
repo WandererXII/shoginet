@@ -14,6 +14,32 @@ const headers = {
   'shoginet-key': clientConfig.key,
 };
 
+const requestTimestamps: number[] = [];
+const MAX_REQUESTS_PER_SECOND = 8;
+const RATE_LIMIT_WINDOW_MS = 1000;
+
+async function checkRateLimit(): Promise<void> {
+  const now = Date.now();
+
+  while (
+    requestTimestamps.length > 0 &&
+    now - requestTimestamps[0] > RATE_LIMIT_WINDOW_MS
+  ) {
+    requestTimestamps.shift();
+  }
+
+  if (requestTimestamps.length >= MAX_REQUESTS_PER_SECOND) {
+    const oldestRequest = requestTimestamps[0];
+    const waitTime = RATE_LIMIT_WINDOW_MS - (now - oldestRequest);
+    if (waitTime > 0) {
+      baseLogger.info(`Rate limit reached, waiting ${waitTime}ms`);
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+    }
+  }
+
+  requestTimestamps.push(Date.now());
+}
+
 function makeJson(res: Record<string, any>) {
   return {
     ...res,
@@ -46,6 +72,7 @@ function joinPath(path: string) {
 let lastLog: number;
 export async function acquireWork(): Promise<Work | undefined> {
   try {
+    await checkRateLimit();
     const url = joinPath('acquire');
     const response = await got.post(url, {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
@@ -69,6 +96,7 @@ export async function submitWork(
   res: Record<string, any>,
 ): Promise<Work | undefined> {
   try {
+    await checkRateLimit();
     const url = joinPath(`${work.work.type}/${work.work.id}`);
     const response = await got.post(url, {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
@@ -84,6 +112,7 @@ export async function submitWork(
 
 export async function abortWork(work: Work): Promise<void> {
   try {
+    await checkRateLimit();
     await got.post(joinPath(`abort/${work.work.id}`), {
       timeout: { request: HTTP_TIMEOUT_UNIMPORTANT_SECONDS * 1000 },
       headers,
@@ -98,6 +127,7 @@ export async function analysisProgressReport(
   res: any,
 ): Promise<void> {
   try {
+    await checkRateLimit();
     await got.post(joinPath(`${work.work.type}/${work.work.id}`), {
       timeout: { request: HTTP_TIMEOUT_UNIMPORTANT_SECONDS * 1000 },
       headers,
