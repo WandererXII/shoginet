@@ -1,6 +1,6 @@
 {
   "name": "shoginet",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "Distributed network for lishogi.org",
   "license": "AGPL-3.0-or-later",
   "author": "WandererXII",
