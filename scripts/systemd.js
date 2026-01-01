@@ -35,7 +35,9 @@ Restart=on-failure
 RestartSec=5
 TimeoutStopSec=610
 KillSignal=SIGINT
-KillMode=control-group
+KillMode=process
+SendSIGKILL=yes
+FinalKillSignal=SIGKILL
 
 [Install]
 WantedBy=multi-user.target
