@@ -3,6 +3,7 @@ import { DEFAULT_MOVE_MOVETIME_SECONDS } from '../consts.js';
 import type { Engine } from '../engine.js';
 import type { MoveWork } from '../types.js';
 import type { Worker } from '../worker.js';
+import { fromFairyKyotoFormat } from './util.js';
 
 export function move(worker: Worker, engine: Engine, work: MoveWork): void {
   worker.logger.debug('Starting move generation');
@@ -20,13 +21,14 @@ export function move(worker: Worker, engine: Engine, work: MoveWork): void {
   engine.send('usinewgame');
 
   engine.once('bestmove', (usi) => {
-    const parsed = parseUsi(usi);
+    const fixedUsi = variant === 'kyotoshogi' ? fromFairyKyotoFormat(usi) : usi;
+    const parsed = parseUsi(fixedUsi);
     if (parsed) {
       const result = { move: { bestmove: makeUsi(parsed) } };
       worker.logger.debug('Emitting move result:', result);
       worker.emit('result', work, result);
     } else {
-      worker.logger.warn(`Received '${usi}' for:`, work);
+      worker.logger.warn(`Received '${fixedUsi}' for:`, work);
       worker.emit('abort', work);
     }
   });

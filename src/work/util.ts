@@ -1,3 +1,6 @@
+import type { DropMove } from 'shogiops/types';
+import { makeUsi, parseUsi } from 'shogiops/util';
+import { promote } from 'shogiops/variant/util';
 import type { ScoreResult } from '../types.js';
 
 export type ParsedInfo = {
@@ -52,4 +55,13 @@ export function parseInfo(line: string): ParsedInfo {
   }
 
   return out;
+}
+
+export function fromFairyKyotoFormat(usi: string): string {
+  if (usi[0] === '+') {
+    const dropUnpromoted = parseUsi(usi.slice(1)) as DropMove;
+    const promotedRole = promote('kyotoshogi')(dropUnpromoted.role)!;
+    return makeUsi({ role: promotedRole, to: dropUnpromoted.to });
+  } else if (usi.includes('-')) return `${usi.slice(0, -1)}+`;
+  else return usi;
 }

@@ -1,5 +1,7 @@
+import type { Rules } from 'shogiops/types';
 import { parseUsi } from 'shogiops/util';
 import type { Work } from '../src/types.js';
+import { fromFairyKyotoFormat } from '../src/work/util.js';
 
 export interface WorkDefinition {
   name: string;
@@ -8,10 +10,13 @@ export interface WorkDefinition {
   validate: (response: any) => boolean | undefined;
 }
 
-function validateBestmove(response: any): boolean {
-  const bm = response.move?.bestmove;
-  const parsed = parseUsi(bm);
-  return !!parsed;
+function validateBestmove(variant: Rules): (response: any) => boolean {
+  return (response) => {
+    const bm = response.move?.bestmove;
+    const fixedBm = variant === 'kyotoshogi' ? fromFairyKyotoFormat(bm) : bm;
+    const parsed = parseUsi(fixedBm);
+    return !!parsed;
+  };
 }
 
 interface PuzzleValidationSpec {
@@ -73,7 +78,7 @@ export const works: WorkDefinition[] = [
       variant: 'standard',
       moves: '4g4f',
     },
-    validate: validateBestmove,
+    validate: validateBestmove('standard'),
   },
   {
     name: 'Move (fairy)',
@@ -92,7 +97,30 @@ export const works: WorkDefinition[] = [
       variant: 'standard',
       moves: '4g4f',
     },
-    validate: validateBestmove,
+    validate: validateBestmove('standard'),
+  },
+  {
+    name: 'Move (kyotoshogi)',
+    path: '/shoginet/move/C',
+    work: {
+      work: {
+        type: 'move',
+        id: 'C',
+        level: 4,
+        clock: {
+          btime: 180000,
+          wtime: 180000,
+          inc: 0,
+          byo: 60,
+        },
+        engine: 'fairy',
+      },
+      game_id: '1InUYzx6',
+      position: 'p+nks+l/5/5/5/+LSK+NP b -',
+      variant: 'kyotoshogi',
+      moves: '1e1d+',
+    },
+    validate: validateBestmove('kyotoshogi'),
   },
   {
     name: 'Analysis',
