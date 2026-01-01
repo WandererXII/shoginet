@@ -51,9 +51,9 @@ export async function acquireWork(): Promise<Work | undefined> {
     });
     const work = processResponse(response);
     return work;
-  } catch (_) {
+  } catch (err) {
     if (!lastLog || Date.now() - lastLog > 60 * 1000 * 5) {
-      baseLogger.error('Failed to acquire work.');
+      baseLogger.error('Failed to acquire work.', err);
       lastLog = Date.now();
     }
     return undefined;
@@ -72,8 +72,8 @@ export async function submitWork(
       json: makeJson(res),
     });
     return processResponse(response);
-  } catch (_) {
-    baseLogger.error('Failed to submit work:', work);
+  } catch (err) {
+    baseLogger.error('Failed to submit work:', work, err);
     return undefined;
   }
 }
@@ -84,8 +84,8 @@ export async function abortWork(work: Work): Promise<void> {
       timeout: { request: HTTP_TIMEOUT_UNIMPORTANT_SECONDS * 1000 },
       headers,
     });
-  } catch (_) {
-    baseLogger.error(`Failed to abort work: ${work}`);
+  } catch (err: any) {
+    baseLogger.error('Failed to abort work:', work, err?.response?.statusCode);
   }
 }
 
