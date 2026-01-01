@@ -57,12 +57,22 @@ export class Worker extends EventEmitter {
     });
     this.statsReporter = new StatsReporter(this);
 
-    this.on('result', () => {
-      clearTimeout(this.taskTimeout);
-    });
+    this.on('result', this.cleanupTimeout);
+    this.on('abort', this.cleanupTimeout);
   }
 
+  private cleanupTimeout(): void {
+    if (this.taskTimeout) {
+      clearTimeout(this.taskTimeout);
+      this.taskTimeout = undefined;
+    }
+  }
+
+  private isInitializing = false;
   initialize(): void {
+    if (this.isInitializing) return;
+    this.isInitializing = true;
+
     const enginesInitialized: Record<EngineKind, boolean> = {
       yaneuraou: !!this.engines.yaneuraou?.isActive,
       fairy: !!this.engines.fairy?.isActive,
@@ -75,8 +85,10 @@ export class Worker extends EventEmitter {
 
     const onReady = (kind: EngineKind) => {
       enginesInitialized[kind] = true;
-      if (enginesInitialized.fairy && enginesInitialized.yaneuraou)
+      if (enginesInitialized.fairy && enginesInitialized.yaneuraou) {
+        this.isInitializing = false;
         this.emit('initialized');
+      }
     };
 
     const onFailure = () => {
@@ -130,17 +142,30 @@ export class Worker extends EventEmitter {
     const engine = this.engines[work.work.engine];
 
     if (!engine || !engine.isActive) {
-      this.logger.error('Engine not found');
+      this.logger.error(
+        `Engine ${work.work.engine} not active. Aborting task and re-initializing.`,
+      );
+      abortWork(work);
+
+      this.once('initialized', () => {
+        this.release();
+      });
+
       this.initialize();
+
       return;
     }
 
     this.currentWork = work;
 
     const onTimeout = () => {
-      // no need to abort - server gave up a long time ago
+      this.logger.info('Timed out for work:', work);
+
       engine.destroy();
-      this.release();
+      this.once('initialized', () => {
+        this.release();
+      });
+      this.initialize();
     };
 
     if (workType === 'analysis') {
@@ -168,6 +193,7 @@ export class Worker extends EventEmitter {
   }
 
   release(): void {
+    this.cleanupTimeout();
     this.currentWork = undefined;
     this.emit('available');
   }

@@ -76,8 +76,8 @@ export async function submitWork(
       json: makeJson(res),
     });
     return processResponse(response);
-  } catch (err) {
-    baseLogger.error('Failed to submit work:', work, err);
+  } catch (err: any) {
+    baseLogger.error('Failed to submit work:', work, err?.response?.statusCode);
     return undefined;
   }
 }

@@ -164,7 +164,7 @@ export class Engine extends EventEmitter {
       }
     }, 500);
     process.once('exit', () => {
-      this.logger.info('Engined exited successfully');
+      this.logger.info('Engine exited successfully');
       clearTimeout(forceKillTimeout);
     });
     this.logger.debug('Sending SIGTERM');
