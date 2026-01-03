@@ -67,7 +67,7 @@ export class WorkerManager {
       verifyYaneuraouVersion(worker.engines.yaneuraou?.info.name || '');
     } catch (err) {
       this.logger.error(`Invalid engine version: ${err}`);
-      process.exit(1);
+      process.emit('SIGINT');
     }
   }
 

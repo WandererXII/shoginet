@@ -62,7 +62,8 @@ function processResponse(res: Response<string>): Work | undefined {
     return JSON.parse(res.body) as Work;
   if (res.statusCode === StatusCodes.UNAUTHORIZED) {
     baseLogger.error(res.body);
-    process.exit(1);
+    process.emit('SIGINT');
+    return undefined;
   }
   throw new Error(`Unexpected status ${res.statusCode}: ${res}`);
 }
