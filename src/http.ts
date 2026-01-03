@@ -50,6 +50,12 @@ function makeJson(res: Record<string, any>) {
   };
 }
 
+const retry = {
+  limit: 3,
+  methods: ['POST'] as Method[],
+  statusCodes: [429],
+};
+
 function processResponse(res: Response<string>): Work | undefined {
   if (res.statusCode === StatusCodes.NO_CONTENT) return undefined;
   if (res.statusCode === StatusCodes.ACCEPTED)
@@ -77,7 +83,7 @@ export async function acquireWork(): Promise<Work | undefined> {
     const response = await got.post(url, {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
       headers,
-      throwHttpErrors: false,
+      retry: retry,
       json: makeJson({}),
     });
     const work = processResponse(response);
@@ -101,6 +107,7 @@ export async function submitWork(
     const response = await got.post(url, {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
       headers,
+      retry: retry,
       json: makeJson(res),
     });
     return processResponse(response);
