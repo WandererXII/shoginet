@@ -27,7 +27,7 @@ export class WorkerManager {
       w.on('result', async (type, res) => {
         const work = await http.submitWork(type, res);
         if (work && this.isRunning) w.task(work);
-        else setTimeout(w.release.bind(w), 1000); // to avoid asking for work immediately
+        else setTimeout(w.release.bind(w), 1250); // to avoid asking for work immediately
       });
 
       w.on('abort', (work) => {
