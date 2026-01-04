@@ -5,11 +5,12 @@ export const LOGGER_REPORT_INTERVAL_SECONDS: number = 30 * 60;
 export const SERVER_CONFIG_REFETCH_SECONDS: number = 8 * 60 * 60;
 export const MAX_BACKOFF_SECONDS = 35.0;
 export const MAX_WORKERS = 3; // for now more than enough
-export const DEFAULT_ANALYSIS_MOVETIME_SECONDS = 3;
+export const DEFAULT_ANALYSIS_MOVETIME_SECONDS = 3; // // at least half of server value
 export const DEFAULT_MOVE_MOVETIME_SECONDS = 0.5;
 export const DEFAULT_PUZZLE_MOVETIME_SECONDS = 3;
 export const WORKER_INIT_TIMEOUT_SECONDS = 30;
-export const TASK_ANALYSIS_TIMEOUT_SECONDS: number = 10 * 60;
+export const TASK_ANALYSIS_MIN_TIMEOUT_SECONDS: number = 30;
+export const TASK_ANALYSIS_MAX_TIMEOUT_SECONDS: number = 20 * 60;
 export const TASK_MOVE_TIMEOUT_SECONDS = 20;
 export const TASK_PUZZLE_TIMEOUT_SECONDS: number = 4 * 60;
 

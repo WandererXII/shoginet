@@ -1,7 +1,9 @@
 import EventEmitter from 'node:events';
 import type { ServerConfig } from './config/server.js';
 import {
-  TASK_ANALYSIS_TIMEOUT_SECONDS,
+  DEFAULT_ANALYSIS_MOVETIME_SECONDS,
+  TASK_ANALYSIS_MAX_TIMEOUT_SECONDS,
+  TASK_ANALYSIS_MIN_TIMEOUT_SECONDS,
   TASK_MOVE_TIMEOUT_SECONDS,
   TASK_PUZZLE_TIMEOUT_SECONDS,
 } from './consts.js';
@@ -169,10 +171,14 @@ export class Worker extends EventEmitter {
     };
 
     if (workType === 'analysis') {
-      this.taskTimeout = setTimeout(
-        onTimeout,
-        TASK_ANALYSIS_TIMEOUT_SECONDS * 1000,
+      const numberOfMoves = work.moves.split(' ').length;
+      const baseTimeoutSeconds =
+        numberOfMoves * (DEFAULT_ANALYSIS_MOVETIME_SECONDS * 3) + 5;
+      const analysisTimeoutSeconds = Math.min(
+        Math.max(baseTimeoutSeconds, TASK_ANALYSIS_MIN_TIMEOUT_SECONDS),
+        TASK_ANALYSIS_MAX_TIMEOUT_SECONDS,
       );
+      this.taskTimeout = setTimeout(onTimeout, analysisTimeoutSeconds * 1000);
       analysis(this, engine, work as AnalysisWork);
     } else if (workType === 'move') {
       this.taskTimeout = setTimeout(
