@@ -39,6 +39,7 @@ export class ServerConfig {
   async initialize(): Promise<void> {
     try {
       await this.load();
+      this.logger.info('Loaded config file from server.');
     } catch {
       this.config = serverConfig;
       this.logger.error(
