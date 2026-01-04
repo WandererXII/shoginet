@@ -7,8 +7,9 @@ function systemdConfig() {
   const user = execSync('whoami').toString().trim();
   const group = execSync('id -gn').toString().trim();
 
-  const npmPath = execSync('which npm').toString().trim();
-  const nodeBinDir = path.dirname(process.execPath);
+  const nodePath = process.execPath;
+  const tsxPath = path.join(cwd, 'node_modules', '.bin', 'tsx');
+  const nodeBinDir = path.dirname(nodePath);
   const envPath = `PATH=${nodeBinDir}:/usr/bin:/bin`;
 
   const output = `[Unit]
@@ -17,8 +18,8 @@ Wants=network-online.target
 
 [Service]
 Environment="${envPath}"
-ExecStartPre=${npmPath} run test
-ExecStart=${npmPath} run start
+# ExecStart=${nodePath} ${tsxPath} ./test/main.ts
+ExecStart=${nodePath} ${tsxPath} ./src/main.ts
 
 WorkingDirectory=${cwd}
 ReadWriteDirectories=${cwd}
