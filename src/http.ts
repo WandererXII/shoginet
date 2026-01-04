@@ -33,7 +33,7 @@ async function checkRateLimit(): Promise<void> {
     const waitTime = RATE_LIMIT_WINDOW_MS - (now - oldestRequest);
     if (waitTime > 0) {
       const actualWaitTime = Math.max(waitTime, 100);
-      baseLogger.info(`Rate limit reached, waiting ${actualWaitTime}ms`);
+      baseLogger.debug(`Rate limit reached, waiting ${actualWaitTime}ms`);
       await new Promise((resolve) => setTimeout(resolve, actualWaitTime));
     }
   }
