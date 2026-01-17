@@ -5,6 +5,8 @@ import { clientConfig } from './config/client.js';
 import {
   HTTP_TIMEOUT_IMPORTANT_SECONDS,
   HTTP_TIMEOUT_UNIMPORTANT_SECONDS,
+  MAX_REQUESTS_PER_SECOND,
+  TOO_MANY_REQUESTS_SLEEP_SECONDS,
 } from './consts.js';
 import { baseLogger } from './logger.js';
 import type { Work } from './types.js';
@@ -15,24 +17,19 @@ const headers = {
 };
 
 const requestTimestamps: number[] = [];
-const MAX_REQUESTS_PER_SECOND = 5;
-const RATE_LIMIT_WINDOW_MS = 1000;
 
-async function checkRateLimit(): Promise<void> {
+async function checkRateLimit(opts: { urgent: boolean }): Promise<void> {
   const now = Date.now();
 
-  while (
-    requestTimestamps.length > 0 &&
-    now - requestTimestamps[0] > RATE_LIMIT_WINDOW_MS
-  ) {
+  while (requestTimestamps.length > 0 && now - requestTimestamps[0] > 1000) {
     requestTimestamps.shift();
   }
 
   if (requestTimestamps.length >= MAX_REQUESTS_PER_SECOND) {
     const oldestRequest = requestTimestamps[0];
-    const waitTime = RATE_LIMIT_WINDOW_MS - (now - oldestRequest);
+    const waitTime = 1000 - (now - oldestRequest);
     if (waitTime > 0) {
-      const actualWaitTime = Math.max(waitTime, 100);
+      const actualWaitTime = Math.max(waitTime, opts.urgent ? 100 : 500);
       baseLogger.debug(`Rate limit reached, waiting ${actualWaitTime}ms`);
       await new Promise((resolve) => setTimeout(resolve, actualWaitTime));
     }
@@ -57,13 +54,24 @@ const retry = {
   statusCodes: [429],
 };
 
-function processResponse(res: Response<string>): Work | undefined {
+async function processResponse(
+  res: Response<string>,
+): Promise<Work | undefined> {
   if (res.statusCode === StatusCodes.NO_CONTENT) return undefined;
   if (res.statusCode === StatusCodes.ACCEPTED)
     return JSON.parse(res.body) as Work;
   if (res.statusCode === StatusCodes.UNAUTHORIZED) {
     baseLogger.error(res.body);
     process.emit('SIGINT');
+    return undefined;
+  }
+  if (res.statusCode === StatusCodes.TOO_MANY_REQUESTS) {
+    baseLogger.warn(
+      `Too many requests, sleeping for ${TOO_MANY_REQUESTS_SLEEP_SECONDS}s...`,
+    );
+    await new Promise((resolve) =>
+      setTimeout(resolve, TOO_MANY_REQUESTS_SLEEP_SECONDS * 1000),
+    );
     return undefined;
   }
   throw new Error(`Unexpected status: ${res.statusCode}`);
@@ -80,7 +88,7 @@ function joinPath(path: string) {
 let lastLog: number;
 export async function acquireWork(): Promise<Work | undefined> {
   try {
-    await checkRateLimit();
+    await checkRateLimit({ urgent: false });
     const url = joinPath('acquire');
     const response = await got.post(url, {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
@@ -89,7 +97,8 @@ export async function acquireWork(): Promise<Work | undefined> {
       retry: retry,
       json: makeJson({}),
     });
-    return processResponse(response);
+    const newWork = await processResponse(response);
+    return newWork;
   } catch (err) {
     if (!lastLog || Date.now() - lastLog > 60 * 1000 * 5) {
       baseLogger.error('Failed to acquire work.', err);
@@ -104,7 +113,7 @@ export async function submitWork(
   res: Record<string, any>,
 ): Promise<Work | undefined> {
   try {
-    await checkRateLimit();
+    await checkRateLimit({ urgent: true });
     const url = joinPath(`${work.work.type}/${work.work.id}`);
     const response = await got.post(url, {
       timeout: { request: HTTP_TIMEOUT_IMPORTANT_SECONDS * 1000 },
@@ -113,7 +122,8 @@ export async function submitWork(
       throwHttpErrors: false,
       json: makeJson(res),
     });
-    return processResponse(response);
+    const newWork = await processResponse(response);
+    return newWork;
   } catch (err: any) {
     baseLogger.error('Failed to submit work:', work, err);
     return undefined;
@@ -122,7 +132,7 @@ export async function submitWork(
 
 export async function abortWork(work: Work): Promise<void> {
   try {
-    await checkRateLimit();
+    await checkRateLimit({ urgent: false });
     await got.post(joinPath(`abort/${work.work.id}`), {
       timeout: { request: HTTP_TIMEOUT_UNIMPORTANT_SECONDS * 1000 },
       headers,
@@ -137,7 +147,7 @@ export async function analysisProgressReport(
   res: any,
 ): Promise<void> {
   try {
-    await checkRateLimit();
+    await checkRateLimit({ urgent: true });
     await got.post(joinPath(`${work.work.type}/${work.work.id}`), {
       timeout: { request: HTTP_TIMEOUT_UNIMPORTANT_SECONDS * 1000 },
       headers,
