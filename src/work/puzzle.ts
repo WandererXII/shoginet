@@ -88,19 +88,23 @@ export function puzzle(worker: Worker, engine: Engine, work: PuzzleWork): void {
         const trimmedResultUsis =
           resultUsis.length % 2 ? resultUsis : resultUsis.slice(0, -1);
         const filteredResultUsis = clearFutileInterposition(trimmedResultUsis);
-        const doWeHavePuzzle = filteredResultUsis.length > 0;
+        const themes = detectThemes(
+          initialSfen,
+          filteredResultUsis.map((u, i) => {
+            return { usi: u, score: bestScores[i] };
+          }),
+        );
+        const doWeHavePuzzle =
+          filteredResultUsis.length > 0 &&
+          isGoodPuzzle(initialSfen, filteredResultUsis, themes);
+
         const result: any = { rejected: !doWeHavePuzzle };
 
         if (doWeHavePuzzle) {
           const puzzleResult = {
             sfen: workSfen,
             line: [...workUsis, ...filteredResultUsis].join(' '),
-            themes: detectThemes(
-              initialSfen,
-              filteredResultUsis.map((u, i) => {
-                return { usi: u, score: bestScores[i] };
-              }),
-            ),
+            themes: themes,
           };
           result.puzzle = puzzleResult;
         }
@@ -243,4 +247,14 @@ function clearFutileInterposition(usis: string[]): string[] {
   }
 
   return usis.slice(0, cutoffIndex);
+}
+
+function isGoodPuzzle(
+  _sfen: string,
+  _moves: string[],
+  themes: PuzzleThemeKey[],
+): boolean {
+  // avoid single move blunders for material
+  if (themes.includes('oneMove') && !themes.includes('mateIn1')) return false;
+  else return true;
 }
