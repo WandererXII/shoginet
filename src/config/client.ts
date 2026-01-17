@@ -18,7 +18,6 @@ interface Config {
   };
   logger: 'error' | 'warn' | 'info' | 'debug' | 'silly';
   key: string;
-  autoUpdate: boolean;
   endpoint: string;
 }
 
