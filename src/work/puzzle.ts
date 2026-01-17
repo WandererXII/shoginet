@@ -134,11 +134,32 @@ function isAmbiguous(scores: MultiPvScores3): boolean {
   else return winChances(bestScore) < winChances(secondScore) + 0.33;
 }
 
+export type PuzzleThemeKey =
+  | 'advantage'
+  | 'equality'
+  | 'crushing'
+  | 'mate'
+  | 'mateIn1'
+  | 'mateIn3'
+  | 'mateIn5'
+  | 'mateIn7'
+  | 'mateIn9'
+  | 'oneMove'
+  | 'short'
+  | 'long'
+  | 'veryLong'
+  | 'opening'
+  | 'middlegame'
+  | 'endgame'
+  | 'tsume'
+  | 'otherSources'
+  | 'lishogiGames';
+
 export function detectThemes(
   sfen: string,
   scoredUsis: UsiWithScore[],
-): string[] {
-  const themes = new Set<string>();
+): PuzzleThemeKey[] {
+  const themes = new Set<PuzzleThemeKey>();
 
   if (scoredUsis.length === 0) return [];
 
