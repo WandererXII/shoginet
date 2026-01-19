@@ -1,6 +1,7 @@
 # Shoginet
 
 [![lishogi.org](https://img.shields.io/badge/☗_lishogi.org-Play_shogi-black)](https://lishogi.org)
+[![ja](https://img.shields.io/badge/lang-ja-white.svg)](https://github.com/WandererXII/shoginet/blob/main/README.ja.md)
 
 **Distributed network for [Lishogi.org](https://lishogi.org)**
 
