@@ -28,20 +28,25 @@ export function verifyConfig(): void {
   const maxThreads = os.cpus().length;
 
   if (!sc.endpoint) throw 'No endpoint set';
+
   if (sc.workers <= 0 || sc.workers > MAX_WORKERS)
     throw `0 < workers <= ${MAX_WORKERS}`;
+
   if (sc.engines.fairy.threads < 1 || sc.engines.yaneuraou.threads < 1)
     throw 'Minimum 1 thread for every engine';
+
   if (
     sc.engines.fairy.threads > maxThreads ||
     sc.engines.yaneuraou.threads > maxThreads
   )
     throw `You can set up to ${maxThreads} with your CPU`;
+
   if (
     sc.engines.fairy.memory < HASH_MIN ||
     sc.engines.yaneuraou.memory < HASH_MIN
   )
     throw `Minimum ${HASH_MIN}MB memory per engine`;
+
   if (!['error', 'warn', 'info', 'debug', 'silly'].includes(sc.logger))
     throw 'Invalid logger level value';
 }

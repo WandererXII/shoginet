@@ -1,4 +1,4 @@
-import { verifyConfig } from './config/client.js';
+import { clientConfig, verifyConfig } from './config/client.js';
 import { ServerConfig } from './config/server.js';
 import { baseLogger } from './logger.js';
 import { verifyVersion } from './version.js';
@@ -10,6 +10,8 @@ async function main(): Promise<void> {
   baseLogger.info('Verifying config file...');
   try {
     verifyConfig();
+    baseLogger.info(`Endpoint: ${clientConfig.endpoint}`);
+    baseLogger.info(`Workers: ${clientConfig.workers}`);
   } catch (err) {
     baseLogger.error(`Invalid config file: ${err}`);
     process.exit(1);
