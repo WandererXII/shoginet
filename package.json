@@ -25,7 +25,7 @@
     "got": "^14.4.8",
     "http-status-codes": "^2.3.0",
     "semver": "^7.7.2",
-    "shogiops": "^0.19.0",
+    "shogiops": "^0.20.0",
     "tslog": "^4.10.2",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"

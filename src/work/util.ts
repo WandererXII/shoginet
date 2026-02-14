@@ -1,4 +1,4 @@
-import type { DropMove } from 'shogiops/types';
+import type { DropMove, Rules } from 'shogiops/types';
 import { makeUsi, parseUsi } from 'shogiops/util';
 import { promote } from 'shogiops/variant/util';
 import type { ScoreResult } from '../types.js';
@@ -57,11 +57,38 @@ export function parseInfo(line: string): ParsedInfo {
   return out;
 }
 
-export function fromFairyKyotoFormat(usi: string): string {
+export function fixFairyUsi(variant: Rules, usi: string): string {
+  if (variant === 'kyotoshogi') return fromFairyKyotoFormat(usi);
+  else if (variant === 'dobutsu') return fromFairyDobutsuFormat(usi);
+  else return usi;
+}
+
+function fromFairyKyotoFormat(usi: string): string {
   if (usi[0] === '+') {
     const dropUnpromoted = parseUsi(usi.slice(1)) as DropMove;
     const promotedRole = promote('kyotoshogi')(dropUnpromoted.role)!;
     return makeUsi({ role: promotedRole, to: dropUnpromoted.to });
   } else if (usi.includes('-')) return `${usi.slice(0, -1)}+`;
   else return usi;
+}
+
+function fromFairyDobutsuFormat(usi: string): string {
+  const reverse: Record<string, string> = {
+    g: 'r',
+    G: 'R',
+    l: 'k',
+    L: 'K',
+    e: 'b',
+    E: 'B',
+    c: 'p',
+    C: 'P',
+  };
+
+  // drops - C*2b -> P*2b
+  if (usi[1] === '*') {
+    const role = usi[0];
+    return (reverse[role] || role) + usi.slice(1);
+  }
+
+  return usi;
 }

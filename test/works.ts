@@ -1,7 +1,7 @@
 import type { Rules } from 'shogiops/types';
 import { parseUsi } from 'shogiops/util';
 import type { Work } from '../src/types.js';
-import { fromFairyKyotoFormat } from '../src/work/util.js';
+import { fixFairyUsi } from '../src/work/util.js';
 
 export interface WorkDefinition {
   name: string;
@@ -13,7 +13,10 @@ export interface WorkDefinition {
 function validateBestmove(variant: Rules): (response: any) => boolean {
   return (response) => {
     const bm = response.move?.bestmove;
-    const fixedBm = variant === 'kyotoshogi' ? fromFairyKyotoFormat(bm) : bm;
+    const fixedBm =
+      variant === 'kyotoshogi' || variant === 'dobutsu'
+        ? fixFairyUsi(variant, bm)
+        : bm;
     const parsed = parseUsi(fixedBm);
     return !!parsed;
   };
