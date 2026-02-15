@@ -17,18 +17,18 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@biomejs/biome": "2.2.4",
+    "@biomejs/biome": "2.3.15",
     "@types/config": "^3.3.5",
-    "@types/node": "^22",
+    "@types/node": "^22.19.11",
     "@types/semver": "^7.7.1",
-    "config": "^4.1.1",
-    "got": "^14.4.8",
+    "config": "^4.3.0",
+    "got": "^14.6.6",
     "http-status-codes": "^2.3.0",
-    "semver": "^7.7.2",
-    "shogiops": "^0.20.0",
+    "semver": "^7.7.4",
+    "shogiops": "^0.20.1",
     "tslog": "^4.10.2",
-    "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "preinstall": "$npm_execpath run copy-config",
