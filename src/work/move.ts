@@ -3,7 +3,7 @@ import { DEFAULT_MOVE_MOVETIME_SECONDS } from '../consts.js';
 import type { Engine } from '../engine.js';
 import type { MoveWork } from '../types.js';
 import type { Worker } from '../worker.js';
-import { fixFairyUsi } from './util.js';
+import { fixFairyUsi, positionFromWork } from './util.js';
 
 export function move(worker: Worker, engine: Engine, work: MoveWork): void {
   worker.logger.debug('Starting move generation');
@@ -26,6 +26,15 @@ export function move(worker: Worker, engine: Engine, work: MoveWork): void {
     if (parsed) {
       const result = { move: { bestmove: makeUsi(parsed) } };
       worker.logger.debug('Emitting move result:', result);
+
+      // verify legality - sanity check
+      const pos = positionFromWork(work);
+      if (!pos || !pos.isLegal(parsed))
+        worker.logger.warn(
+          `Coudln't verify legality of usi we are about to submit (${makeUsi(parsed)}):`,
+          work,
+        );
+
       worker.emit('result', work, result);
     } else {
       worker.logger.warn(`Received '${fixedUsi}' for:`, work);

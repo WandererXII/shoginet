@@ -15,7 +15,7 @@ export interface ScoreResult {
 
 export type WorkType = 'move' | 'analysis' | 'puzzle';
 
-interface BaseWork {
+export interface BaseWork {
   work: {
     type: WorkType;
     id: string;

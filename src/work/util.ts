@@ -1,7 +1,9 @@
+import { parseSfen } from 'shogiops/sfen';
 import type { DropMove, Rules } from 'shogiops/types';
 import { makeUsi, parseUsi } from 'shogiops/util';
+import type { Position } from 'shogiops/variant/position';
 import { promote } from 'shogiops/variant/util';
-import type { ScoreResult } from '../types.js';
+import type { BaseWork, ScoreResult } from '../types.js';
 
 export type ParsedInfo = {
   depth?: number;
@@ -55,6 +57,19 @@ export function parseInfo(line: string): ParsedInfo {
   }
 
   return out;
+}
+
+export function positionFromWork(work: BaseWork): Position | undefined {
+  const pos = parseSfen(work.variant || 'standard', work.position, false);
+  if (pos.isOk) {
+    for (const wMove of work.moves) {
+      const parsedWMove = parseUsi(wMove);
+      if (parsedWMove) pos.value.play(parsedWMove);
+      else return;
+    }
+
+    return pos.value;
+  }
 }
 
 export function fixFairyUsi(variant: Rules, usi: string): string {
