@@ -60,10 +60,12 @@ export function parseInfo(line: string): ParsedInfo {
 }
 
 export function positionFromWork(work: BaseWork): Position | undefined {
-  const pos = parseSfen(work.variant || 'standard', work.position, false);
+  const variant = work.variant || 'standard';
+  const pos = parseSfen(variant, work.position, false);
   if (pos.isOk) {
-    for (const wMove of work.moves) {
-      const parsedWMove = parseUsi(wMove);
+    const wMoves = work.moves.split(' ').filter((wm) => !!wm);
+    for (const wMove of wMoves) {
+      const parsedWMove = parseUsi(fixFairyUsi(variant, wMove));
       if (parsedWMove) pos.value.play(parsedWMove);
       else return;
     }
