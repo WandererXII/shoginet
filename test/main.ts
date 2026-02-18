@@ -4,6 +4,8 @@ import config from 'config';
 import { StatusCodes } from 'http-status-codes';
 import { type WorkDefinition, works } from './works.js';
 
+const stopAfterMoves = false;
+
 function main() {
   let shoginetProcess: ChildProcessWithoutNullStreams;
   let exitCode: number = 0;
@@ -24,7 +26,10 @@ function main() {
         if (!running) return noWork();
 
         const next = works.shift();
-        if (!next) {
+        if (
+          !next ||
+          (stopAfterMoves && next.path.startsWith('/shoginet/analysis'))
+        ) {
           console.log('All tests finished');
           running = false;
           startShutdown();
