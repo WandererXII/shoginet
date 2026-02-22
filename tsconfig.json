@@ -33,5 +33,6 @@
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
     "noEmit": true
-  }
+  },
+  "include": ["./src", "./test"]
 }
