@@ -46,7 +46,7 @@ export function move(worker: Worker, engine: Engine, work: MoveWork): void {
 
       worker.emit('result', work, result);
     } else {
-      worker.logger.warn(`Received '${fixedUsi}' for:`, work);
+      worker.logger.warn(`Aborting work:`, work);
       worker.emit('abort', work);
     }
   });

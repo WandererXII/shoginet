@@ -31,7 +31,7 @@ export class WorkerManager {
       });
 
       w.on('abort', (work) => {
-        http.abortWork(work);
+        if (work.work.type === 'analysis') http.abortWork(work);
         w.release();
       });
 
