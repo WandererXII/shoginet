@@ -149,6 +149,29 @@ export const works: WorkDefinition[] = [
     validate: validateBestmove('dobutsu'),
   },
   {
+    name: 'Move (dobutsu - resign)',
+    path: '/shoginet/move/E',
+    work: {
+      work: {
+        type: 'move',
+        id: 'E',
+        level: 1,
+        clock: {
+          btime: 180000,
+          wtime: 180000,
+          inc: 0,
+          byo: 60,
+        },
+        engine: 'fairy',
+      },
+      game_id: '1InUYzx6',
+      position: '1k1/rb1/2p/K1r w Pb 22',
+      variant: 'dobutsu',
+      moves: '3b3c',
+    },
+    validate: validateBestmove('dobutsu'),
+  },
+  {
     name: 'Analysis',
     path: '/shoginet/analysis/C',
     work: {

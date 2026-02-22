@@ -77,6 +77,7 @@ function engineBypass(work: MoveWork): MoveOrDrop | undefined {
     }
 
     if (
+      !pos.isCheck() &&
       pos
         .allDropDests()
         .values()
