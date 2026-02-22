@@ -31,7 +31,13 @@ export function move(worker: Worker, engine: Engine, work: MoveWork): void {
 
   engine.once('bestmove', (usi) => {
     const fixedUsi = engine.kind === 'fairy' ? fixFairyUsi(variant, usi) : usi;
-    const parsed = parseUsi(fixedUsi);
+    let parsed = parseUsi(fixedUsi);
+
+    if (!parsed) {
+      worker.logger.warn(`Received '${fixedUsi}' for:`, work);
+      parsed = generateRandomMove(work);
+    }
+
     if (parsed) {
       const result = { move: { bestmove: makeUsi(parsed) } };
       worker.logger.debug('Emitting move result:', result);
@@ -94,9 +100,18 @@ function engineBypass(work: MoveWork): MoveOrDrop | undefined {
         if (!clone.isCheck()) return;
       }
     }
+
     // at this point we know all moves put/keep us in check and no drops exist
     // so we return a random move
-    const moves = allMoves.entries().find(([_, ds]) => ds.nonEmpty());
-    if (moves) return { from: moves[0], to: moves[1].first()! };
+    return generateRandomMove(work);
   } else return;
+}
+
+function generateRandomMove(work: MoveWork): MoveOrDrop | undefined {
+  const pos = positionFromWork(work);
+  if (!pos) return;
+
+  const allMoves = pos.allMoveDests();
+  const moves = allMoves.entries().find(([_, ds]) => ds.nonEmpty());
+  if (moves) return { from: moves[0], to: moves[1].first()! };
 }
