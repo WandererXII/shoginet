@@ -110,7 +110,10 @@ function fromFairyDobutsuFormat(usi: string): string {
   return usi;
 }
 
-export function transformSfen(sfen: string, mapping: Record<string, string>) {
+export function transformSfen(
+  sfen: string,
+  mapping: Record<string, string>,
+): string {
   return sfen
     .split('')
     .map((c) => mapping[c] || c)
